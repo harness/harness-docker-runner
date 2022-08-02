@@ -9,11 +9,10 @@ package server
 import (
 	"context"
 	"crypto/tls"
-	"net/http"
-
 	"github.com/docker/go-connections/tlsconfig"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
+	"net/http"
 )
 
 // A Server defines parameters for running an HTTPS/TLS server.
@@ -29,6 +28,9 @@ type Server struct {
 
 // Start initializes a server to respond to HTTPS/TLS network requests.
 func (s *Server) Start(ctx context.Context) error {
+	// Uncomment the following line for local run
+	s.Insecure = true
+
 	var tlsConfig *tls.Config
 	if s.Insecure {
 		tlsConfig = nil
@@ -59,6 +61,8 @@ func (s *Server) Start(ctx context.Context) error {
 
 	var g errgroup.Group
 	g.Go(func() error {
+		// Uncomment the following line for local run
+		s.Insecure = true
 		if s.Insecure {
 			return srv.ListenAndServe()
 		}

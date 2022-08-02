@@ -26,9 +26,16 @@ type (
 		TIConfig          TIConfig          `json:"ti_config,omitempty"`
 		Files             []*spec.File      `json:"files,omitempty"`
 		MountDockerSocket *bool             `json:"mount_docker_socket,omitempty"`
+		ID                string            `json:"id"` // stage runtime ID
+		InfraType         string            `json:"infra_type"`
+		CorrelationID     string            `json:"correlation_id"`
+		LogKey            string            `json:"log_key"`
 	}
 
-	SetupResponse struct{}
+	SetupResponse struct {
+		IPAddress  string `json:"ip_address"`
+		InstanceID string `json:"instance_id"`
+	}
 
 	DestroyRequest struct{}
 

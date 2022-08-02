@@ -6,6 +6,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"runtime"
@@ -14,21 +15,28 @@ import (
 	"github.com/harness/lite-engine/api"
 	"github.com/harness/lite-engine/engine"
 	"github.com/harness/lite-engine/engine/spec"
+	"github.com/harness/lite-engine/executor"
 	"github.com/harness/lite-engine/logger"
 	"github.com/harness/lite-engine/pipeline"
+	leruntime "github.com/harness/lite-engine/pipeline/runtime"
 )
 
 // HandleExecuteStep returns an http.HandlerFunc that executes a step
 func HandleSetup(engine *engine.Engine) http.HandlerFunc {
+	fmt.Println("enter HandleSetup")
 	return func(w http.ResponseWriter, r *http.Request) {
 		st := time.Now()
 
 		var s api.SetupRequest
 		err := json.NewDecoder(r.Body).Decode(&s)
+		//TODO:xun
+		s.Network.ID = s.ID
 		if err != nil {
 			WriteBadRequest(w, err)
 			return
 		}
+		id := s.ID
+		fmt.Println("Handle SetupRequest: %s", s)
 
 		setProxyEnvs(s.Envs)
 		state := pipeline.GetState()
@@ -49,6 +57,7 @@ func HandleSetup(engine *engine.Engine) http.HandlerFunc {
 			Files:             s.Files,
 			EnableDockerSetup: s.MountDockerSocket,
 		}
+
 		if err := engine.Setup(r.Context(), cfg); err != nil {
 			logger.FromRequest(r).
 				WithField("latency", time.Since(st)).
@@ -57,7 +66,20 @@ func HandleSetup(engine *engine.Engine) http.HandlerFunc {
 			WriteError(w, err)
 			return
 		}
-		WriteJSON(w, api.SetupResponse{}, http.StatusOK)
+
+		// Setup executors for all stage steps
+		stepExecutors := []*leruntime.StepExecutor{}
+		// Add the state of this execution to the executor
+		stageData := &executor.StageData{
+			Engine:        engine,
+			StepExecutors: stepExecutors,
+			State:         state,
+		}
+		ex := executor.GetExecutor()
+		ex.Add(id, stageData)
+
+		//TODO:xun
+		WriteJSON(w, api.SetupResponse{IPAddress: "127.0.0.1"}, http.StatusOK)
 		logger.FromRequest(r).
 			WithField("latency", time.Since(st)).
 			WithField("time", time.Now().Format(time.RFC3339)).
