@@ -29,8 +29,6 @@ func HandleSetup(engine *engine.Engine) http.HandlerFunc {
 
 		var s api.SetupRequest
 		err := json.NewDecoder(r.Body).Decode(&s)
-		//TODO:xun
-		s.Network.ID = s.ID
 		if err != nil {
 			WriteBadRequest(w, err)
 			return
@@ -68,17 +66,19 @@ func HandleSetup(engine *engine.Engine) http.HandlerFunc {
 		}
 
 		// Setup executors for all stage steps
-		stepExecutors := []*leruntime.StepExecutor{}
+		stepExecutor := leruntime.NewStepExecutor(engine)
 		// Add the state of this execution to the executor
 		stageData := &executor.StageData{
-			Engine:        engine,
-			StepExecutors: stepExecutors,
-			State:         state,
+			Engine:       engine,
+			StepExecutor: stepExecutor,
+			State:        state,
 		}
 		ex := executor.GetExecutor()
-		ex.Add(id, stageData)
+		if err := ex.Add(id, stageData); err != nil {
+			logger.FromRequest(r).Errorln(err.Error())
+			WriteError(w, err)
+		}
 
-		//TODO:xun
 		WriteJSON(w, api.SetupResponse{IPAddress: "127.0.0.1"}, http.StatusOK)
 		logger.FromRequest(r).
 			WithField("latency", time.Since(st)).

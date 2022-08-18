@@ -53,6 +53,8 @@ func (e *Engine) Setup(ctx context.Context, pipelineConfig *spec.PipelineConfig)
 	for _, vol := range pipelineConfig.Volumes {
 		if vol != nil && vol.HostPath != nil {
 			path := vol.HostPath.Path
+			//TODO:xun
+			path = "/Users/xunhe/harness"
 			vol.HostPath.Path = pathConverter(path)
 
 			if _, err := os.Stat(path); err == nil {

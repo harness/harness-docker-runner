@@ -6,6 +6,7 @@ package handler
 
 import (
 	"encoding/json"
+	"github.com/harness/lite-engine/executor"
 	"io"
 	"net/http"
 	"runtime"
@@ -34,9 +35,15 @@ func HandleStartStep(e *pruntime.StepExecutor) http.HandlerFunc {
 		if s.MountDockerSocket == nil || *s.MountDockerSocket { // required to support m1 where docker isn't installed.
 			s.Volumes = append(s.Volumes, getDockerSockVolumeMount())
 		}
-
 		s.Volumes = append(s.Volumes, getSharedVolumeMount())
 
+		ex := executor.GetExecutor()
+		stageData, err := ex.Get(s.StageRuntimeID)
+		if err != nil {
+			logger.FromRequest(r).Errorln(err.Error())
+			WriteError(w, err)
+		}
+		e = stageData.StepExecutor
 		if err := e.StartStep(r.Context(), &s); err != nil {
 			WriteError(w, err)
 		} else {

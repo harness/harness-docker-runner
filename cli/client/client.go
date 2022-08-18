@@ -111,7 +111,7 @@ func runStage(client *HTTPClient, remoteLog bool) error {
 	}
 	logrus.Infof("healthy")
 
-	setupConfig := api.SetupRequest{
+	setupConfig := api.SetupRequestConfig{
 		Volumes: []*spec.Volume{
 			{
 				HostPath: &spec.VolumeHostPath{
@@ -141,7 +141,9 @@ func runStage(client *HTTPClient, remoteLog bool) error {
 		}
 	}
 	setup := &api.SetupRequest{
-		ID: "1",
+		//TODO:xun
+		ID:                 "1",
+		SetupRequestConfig: setupConfig,
 	}
 	logrus.Infof("starting setup")
 	logrus.Infof("starting setup")
@@ -167,7 +169,7 @@ func runStage(client *HTTPClient, remoteLog bool) error {
 }
 
 func getRunStep(id, cmd, workdir string) *api.StartStepRequest {
-	s := &api.StartStepRequest{
+	config := api.StartStepRequestConfig{
 		ID:    id,
 		Name:  id,
 		Kind:  api.Run,
@@ -189,6 +191,12 @@ func getRunStep(id, cmd, workdir string) *api.StartStepRequest {
 			},
 		},
 	}
+	s := &api.StartStepRequest{
+		//TODO:xun
+		StageRuntimeID:         "1",
+		StartStepRequestConfig: config,
+	}
+
 	s.Run.Command = []string{cmd}
 	s.Run.Entrypoint = []string{"sh", "-c"}
 	return s
