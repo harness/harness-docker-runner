@@ -175,6 +175,10 @@ func (e *Docker) Destroy(ctx context.Context, pipelineConfig *spec.PipelineConfi
 		logrus.WithField("network", pipelineConfig.Network.ID).WithField("error", err).Warnln("failed to remove network")
 	}
 
+	e.mu.Lock()
+	e.containers = nil
+	e.mu.Unlock()
+
 	// notice that we never collect or return any errors.
 	// this is because we silently ignore cleanup failures
 	// and instead ask the system admin to periodically run

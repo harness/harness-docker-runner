@@ -141,11 +141,9 @@ func runStage(client *HTTPClient, remoteLog bool) error {
 		}
 	}
 	setup := &api.SetupRequest{
-		//TODO:xun
 		ID:                 "1",
 		SetupRequestConfig: setupConfig,
 	}
-	logrus.Infof("starting setup")
 	logrus.Infof("starting setup")
 	if _, err := client.Setup(ctx, setup); err != nil {
 		logrus.WithError(err).Errorln("setup call failed")
@@ -192,7 +190,6 @@ func getRunStep(id, cmd, workdir string) *api.StartStepRequest {
 		},
 	}
 	s := &api.StartStepRequest{
-		//TODO:xun
 		StageRuntimeID:         "1",
 		StartStepRequestConfig: config,
 	}

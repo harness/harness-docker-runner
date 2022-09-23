@@ -18,6 +18,7 @@ var (
 // Executor maps stage runtime ID to the state of the stage
 type Executor struct {
 	m map[string]*StageData
+	//TODO:xun add map to track output vars
 }
 
 // GetExecutor returns a singleton executor object used throughout the lifecycle

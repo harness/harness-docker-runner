@@ -6,6 +6,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/harness/lite-engine/executor"
 	"net/http"
 	"time"
@@ -32,17 +33,26 @@ func HandleDestroy(engine *engine.Engine) http.HandlerFunc {
 		if err != nil {
 			logger.FromRequest(r).Errorln(err.Error())
 			WriteError(w, err)
-		}
-
-		if err := stageData.Engine.Destroy(r.Context()); err != nil {
-			WriteError(w, err)
 		} else {
-			WriteJSON(w, api.DestroyResponse{}, http.StatusOK)
+			fmt.Println("Destroy retrieved stage info for %s", s.ID)
 		}
 
-		logger.FromRequest(r).
-			WithField("latency", time.Since(st)).
-			WithField("time", time.Now().Format(time.RFC3339)).
-			Infoln("api: successfully destroyed the stage resources")
+		if stageData != nil {
+			if engine != stageData.Engine {
+				fmt.Println("engine not equal, stageData.Engine:%p engine:%p", stageData.Engine, engine)
+			}
+			engine = stageData.Engine
+
+			if err := engine.Destroy(r.Context()); err != nil {
+				WriteError(w, err)
+			} else {
+				WriteJSON(w, api.DestroyResponse{}, http.StatusOK)
+			}
+
+			logger.FromRequest(r).
+				WithField("latency", time.Since(st)).
+				WithField("time", time.Now().Format(time.RFC3339)).
+				Infoln("api: successfully destroyed the stage resources")
+		}
 	}
 }
