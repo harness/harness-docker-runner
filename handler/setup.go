@@ -18,19 +18,17 @@ import (
 	"github.com/harness/lite-engine/executor"
 	"github.com/harness/lite-engine/logger"
 	"github.com/harness/lite-engine/pipeline"
-	leruntime "github.com/harness/lite-engine/pipeline/runtime"
+	prruntime "github.com/harness/lite-engine/pipeline/runtime"
 )
 
 // HandleExecuteStep returns an http.HandlerFunc that executes a step
-func HandleSetup(engine *engine.Engine) http.HandlerFunc {
+func HandleSetup(engine *engine.Engine, stepExecutor *prruntime.StepExecutor) http.HandlerFunc {
 	fmt.Println("enter HandleSetup")
 	return func(w http.ResponseWriter, r *http.Request) {
 		st := time.Now()
 
 		var s api.SetupRequest
 		err := json.NewDecoder(r.Body).Decode(&s)
-		//TODO:xun
-		s.Network.ID = s.ID
 		if err != nil {
 			WriteBadRequest(w, err)
 			return
@@ -40,7 +38,7 @@ func HandleSetup(engine *engine.Engine) http.HandlerFunc {
 
 		setProxyEnvs(s.Envs)
 		state := pipeline.GetState()
-		state.Set(s.Secrets, s.LogConfig, s.TIConfig)
+		state.Set(s.Secrets, s.LogConfig, s.TIConfig, s.SetupRequestConfig.Network.ID)
 
 		if s.MountDockerSocket == nil || *s.MountDockerSocket { // required to support m1 where docker isn't installed.
 			s.Volumes = append(s.Volumes, getDockerSockVolume())
@@ -67,18 +65,20 @@ func HandleSetup(engine *engine.Engine) http.HandlerFunc {
 			return
 		}
 
-		// Setup executors for all stage steps
-		stepExecutors := []*leruntime.StepExecutor{}
 		// Add the state of this execution to the executor
 		stageData := &executor.StageData{
-			Engine:        engine,
-			StepExecutors: stepExecutors,
-			State:         state,
+			Engine:       engine,
+			StepExecutor: stepExecutor,
+			State:        state,
 		}
 		ex := executor.GetExecutor()
-		ex.Add(id, stageData)
+		if err := ex.Add(id, stageData); err != nil {
+			logger.FromRequest(r).Errorln(err.Error())
+			WriteError(w, err)
+			return
+		}
+		fmt.Println("Setup saved stage info for %s", id)
 
-		//TODO:xun
 		WriteJSON(w, api.SetupResponse{IPAddress: "127.0.0.1"}, http.StatusOK)
 		logger.FromRequest(r).
 			WithField("latency", time.Since(st)).

@@ -6,6 +6,8 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
+	"github.com/harness/lite-engine/executor"
 	"io"
 	"net/http"
 	"runtime"
@@ -34,13 +36,46 @@ func HandleStartStep(e *pruntime.StepExecutor) http.HandlerFunc {
 		if s.MountDockerSocket == nil || *s.MountDockerSocket { // required to support m1 where docker isn't installed.
 			s.Volumes = append(s.Volumes, getDockerSockVolumeMount())
 		}
-
 		s.Volumes = append(s.Volumes, getSharedVolumeMount())
-
-		if err := e.StartStep(r.Context(), &s); err != nil {
+		if len(s.StartStepRequestConfig.OutputVars) > 0 {
+			s.Files = []*spec.File{
+				{
+					Path:  fmt.Sprintf("/tmp/engine/%s.out", s.ID),
+					IsDir: false,
+					Mode:  0777,
+				},
+			}
+		}
+		ex := executor.GetExecutor()
+		stageData, err := ex.Get(s.StageRuntimeID)
+		if err != nil {
+			logger.FromRequest(r).Errorln(err.Error())
 			WriteError(w, err)
+		}
+
+		e = stageData.StepExecutor
+		s.StartStepRequestConfig.Network = stageData.State.GetNetwork()
+		fmt.Println("Step retrieved stage info for %s", s.StageRuntimeID)
+
+		ctx := r.Context()
+		if err := e.StartStep(ctx, &s); err != nil {
+			WriteError(w, err)
+		}
+
+		pollResp, err := e.PollStep(ctx, &api.PollStepRequest{ID: s.ID})
+		if err != nil {
+			WriteError(w, err)
+			return
+		}
+
+		pollRespErr := pollResp.Error
+		if pollRespErr != "" {
+			fmt.Println("Response error:%s", pollResp.Error)
+			//response = api.StartStepResponse{CommandExecutionStatus: api.Failure, ErrorMessage: pollRespErr}
+			WriteJSON(w, pollResp, http.StatusBadRequest)
 		} else {
-			WriteJSON(w, api.StartStepResponse{}, http.StatusOK)
+			//response = api.StartStepResponse{CommandExecutionStatus: api.Success, OutputVars: pollResp.Outputs}
+			WriteJSON(w, pollResp, http.StatusOK)
 		}
 
 		logger.FromRequest(r).

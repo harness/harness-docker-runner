@@ -8,6 +8,18 @@ import (
 	"github.com/harness/lite-engine/engine/spec"
 )
 
+type CommandExecutionStatus string
+
+type Status string
+
+const (
+	Success      CommandExecutionStatus = "SUCCESS"
+	Failure      CommandExecutionStatus = "FAILURE"
+	RunningState CommandExecutionStatus = "RUNNING"
+	Queued       CommandExecutionStatus = "QUEUED"
+	Skipped      CommandExecutionStatus = "SKIPPED"
+)
+
 type (
 	HealthResponse struct {
 		Version         string `json:"version"`
@@ -18,6 +30,16 @@ type (
 	}
 
 	SetupRequest struct {
+		ID                 string            `json:"id"` // stage runtime ID
+		PoolID             string            `json:"pool_id"`
+		Tags               map[string]string `json:"tags"`
+		CorrelationID      string            `json:"correlation_id"`
+		LogKey             string            `json:"log_key"`
+		InfraType          string            `json:"infra_type"`
+		SetupRequestConfig `json:"setup_request"`
+	}
+
+	SetupRequestConfig struct {
 		Envs              map[string]string `json:"envs,omitempty"`
 		Network           spec.Network      `json:"network"`
 		Volumes           []*spec.Volume    `json:"volumes,omitempty"`
@@ -26,8 +48,6 @@ type (
 		TIConfig          TIConfig          `json:"ti_config,omitempty"`
 		Files             []*spec.File      `json:"files,omitempty"`
 		MountDockerSocket *bool             `json:"mount_docker_socket,omitempty"`
-		ID                string            `json:"id"` // stage runtime ID
-		InfraType         string            `json:"infra_type"`
 		CorrelationID     string            `json:"correlation_id"`
 		LogKey            string            `json:"log_key"`
 	}
@@ -37,12 +57,23 @@ type (
 		InstanceID string `json:"instance_id"`
 	}
 
-	DestroyRequest struct{}
+	DestroyRequest struct {
+		ID string `json:"id"` // stage runtime ID
+	}
 
 	DestroyResponse struct{}
 
 	StartStepRequest struct {
+		StageRuntimeID         string `json:"stage_runtime_id"`
+		IPAddress              string `json:"ip_address"`
+		PoolID                 string `json:"pool_id"`
+		CorrelationID          string `json:"correlation_id"`
+		StartStepRequestConfig `json:"start_step_request"`
+	}
+
+	StartStepRequestConfig struct {
 		ID         string            `json:"id,omitempty"` // Unique identifier of step
+		InfraType  string            `json:"infra_type"`
 		Detach     bool              `json:"detach,omitempty"`
 		Envs       map[string]string `json:"environment,omitempty"`
 		Name       string            `json:"name,omitempty"`
@@ -86,7 +117,28 @@ type (
 		Files        []*spec.File         `json:"files,omitempty"`
 	}
 
-	StartStepResponse struct{}
+	DelegateMetaInfo struct {
+		ID       string `json:"id"`
+		HostName string `json:"host_name"`
+	}
+
+	VMServiceStatus struct {
+		ID           string `json:"identifier"`
+		Name         string `json:"name"`
+		Image        string `json:"image"`
+		LogKey       string `json:"log_key"`
+		Status       Status `json:"status"`
+		ErrorMessage string `json:"error_message"`
+	}
+
+	StartStepResponse struct {
+		ErrorMessage           string                 `json:"error_message"`
+		IPAddress              string                 `json:"ip_address"`
+		OutputVars             map[string]string      `json:"output_vars"`
+		ServiceStatuses        []VMServiceStatus      `json:"service_statuses"`
+		CommandExecutionStatus CommandExecutionStatus `json:"command_execution_status"`
+		DelegateMetaInfo       DelegateMetaInfo       `json:"delegate_meta_info"`
+	}
 
 	PollStepRequest struct {
 		ID string `json:"id,omitempty"`

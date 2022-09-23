@@ -60,7 +60,6 @@ type HTTPClient struct {
 	Endpoint string
 }
 
-//TODO:xun change in to interface
 // Setup will setup the stage config
 func (c *HTTPClient) Setup(ctx context.Context, in *api.SetupRequest) (*api.SetupResponse, error) {
 	path := "setup"

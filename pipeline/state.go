@@ -30,6 +30,7 @@ type State struct {
 	tiConfig  api.TIConfig
 	secrets   []string
 	logClient logstream.Client
+	network   string
 }
 
 func NewState() *State {
@@ -41,12 +42,13 @@ func NewState() *State {
 	}
 }
 
-func (s *State) Set(secrets []string, logConfig api.LogConfig, tiConfig api.TIConfig) { // nolint:gocritic
+func (s *State) Set(secrets []string, logConfig api.LogConfig, tiConfig api.TIConfig, network string) { // nolint:gocritic
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.secrets = secrets
 	s.logConfig = logConfig
 	s.tiConfig = tiConfig
+	s.network = network
 }
 
 func (s *State) GetSecrets() []string {
@@ -76,6 +78,13 @@ func (s *State) GetTIConfig() *api.TIConfig {
 	defer s.mu.Unlock()
 
 	return &s.tiConfig
+}
+
+func (s *State) GetNetwork() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.network
 }
 
 func GetState() *State {
