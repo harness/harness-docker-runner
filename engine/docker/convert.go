@@ -127,9 +127,6 @@ func toHostConfig(pipelineConfig *spec.PipelineConfig, step *spec.Step) *contain
 func toNetConfig(pipelineConfig *spec.PipelineConfig, proc *spec.Step) *network.NetworkingConfig {
 	// if the user overrides the default network we do not
 	// attach to the user-defined network.
-	if proc.Network != "" {
-		return &network.NetworkingConfig{}
-	}
 	endpoints := map[string]*network.EndpointSettings{}
 	endpoints[pipelineConfig.Network.ID] = &network.EndpointSettings{
 		NetworkID: pipelineConfig.Network.ID,

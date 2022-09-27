@@ -30,7 +30,6 @@ var random = func() string {
 
 // HandleExecuteStep returns an http.HandlerFunc that executes a step
 func HandleSetup(engine *engine.Engine, stepExecutor *prruntime.StepExecutor) http.HandlerFunc {
-	fmt.Println("enter HandleSetup")
 	return func(w http.ResponseWriter, r *http.Request) {
 		st := time.Now()
 
