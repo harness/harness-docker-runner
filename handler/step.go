@@ -6,18 +6,19 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
-	"github.com/harness/lite-engine/executor"
 	"io"
 	"net/http"
 	"runtime"
 	"time"
 
+	"github.com/harness/lite-engine/executor"
+
 	"github.com/harness/lite-engine/api"
 	"github.com/harness/lite-engine/engine"
 	"github.com/harness/lite-engine/engine/spec"
 	"github.com/harness/lite-engine/logger"
-	"github.com/harness/lite-engine/pipeline"
 	pruntime "github.com/harness/lite-engine/pipeline/runtime"
 )
 
@@ -33,10 +34,11 @@ func HandleStartStep(e *pruntime.StepExecutor) http.HandlerFunc {
 			return
 		}
 
+		fmt.Printf("step request: %+v\n", s)
+
 		if s.MountDockerSocket == nil || *s.MountDockerSocket { // required to support m1 where docker isn't installed.
 			s.Volumes = append(s.Volumes, getDockerSockVolumeMount())
 		}
-		s.Volumes = append(s.Volumes, getSharedVolumeMount())
 		if len(s.StartStepRequestConfig.OutputVars) > 0 {
 			s.Files = []*spec.File{
 				{
@@ -55,7 +57,22 @@ func HandleStartStep(e *pruntime.StepExecutor) http.HandlerFunc {
 
 		e = stageData.StepExecutor
 		s.StartStepRequestConfig.Network = stageData.State.GetNetwork()
-		fmt.Println("Step retrieved stage info for %s", s.StageRuntimeID)
+		hv, err := getHarnessVolume(stageData.State.GetVolumes())
+		if err != nil {
+			WriteError(w, err)
+			return
+		}
+		s.StartStepRequestConfig.WorkingDir = hv.HostPath.Path
+		for _, v := range s.StartStepRequestConfig.Volumes {
+			if v.Name == "harness" {
+				fmt.Println("name: ", v.Name)
+				fmt.Println("path: ", v.Path)
+				fmt.Println("host path: ", hv.HostPath.Name)
+				fmt.Println("host name: ", hv.HostPath.Path)
+				v.Name = hv.HostPath.Name
+				v.Path = hv.HostPath.Path
+			}
+		}
 
 		ctx := r.Context()
 		if err := e.StartStep(ctx, &s); err != nil {
@@ -83,6 +100,17 @@ func HandleStartStep(e *pruntime.StepExecutor) http.HandlerFunc {
 			WithField("time", time.Now().Format(time.RFC3339)).
 			Infoln("api: successfully started the step")
 	}
+}
+
+func getHarnessVolume(volumes []*spec.Volume) (*spec.Volume, error) {
+	for _, v := range volumes {
+		if v.HostPath != nil {
+			if v.HostPath.Name == "harness" {
+				return v, nil
+			}
+		}
+	}
+	return nil, errors.New("could not parse the harness volume from volume paths")
 }
 
 func HandlePollStep(e *pruntime.StepExecutor) http.HandlerFunc {
@@ -162,13 +190,6 @@ func HandleStreamOutput(e *pruntime.StepExecutor) http.HandlerFunc {
 			WithField("time", time.Now().Format(time.RFC3339)).
 			WithField("count", count).
 			Infoln("api: successfully streamed the step log")
-	}
-}
-
-func getSharedVolumeMount() *spec.VolumeMount {
-	return &spec.VolumeMount{
-		Name: pipeline.SharedVolName,
-		Path: pipeline.SharedVolPath,
 	}
 }
 

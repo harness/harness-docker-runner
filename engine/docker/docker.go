@@ -11,6 +11,7 @@ package docker
 import (
 	"context"
 	"io"
+	"os"
 	"sync"
 
 	"github.com/harness/lite-engine/engine/docker/image"
@@ -83,6 +84,19 @@ func (e *Docker) Setup(ctx context.Context, pipelineConfig *spec.PipelineConfig)
 		})
 		if err != nil {
 			return errors.TrimExtraInfo(err)
+		}
+	}
+
+	// This creates host paths before starting the setup for temporary workspaces
+	for _, vol := range pipelineConfig.Volumes {
+		if vol.HostPath != nil && vol.HostPath.Create {
+			if err := os.MkdirAll(vol.HostPath.Path, 0777); err != nil {
+				logrus.
+					WithError(err).
+					WithField("path", vol.HostPath.Path).
+					Errorln("cannot create temporary workspace on host")
+				return err
+			}
 		}
 	}
 
@@ -167,6 +181,14 @@ func (e *Docker) Destroy(ctx context.Context, pipelineConfig *spec.PipelineConfi
 		}
 		if err := e.client.VolumeRemove(ctx, vol.EmptyDir.ID, true); err != nil {
 			logrus.WithField("volume", vol.EmptyDir.ID).WithField("error", err).Warnln("failed to remove volume")
+		}
+	}
+
+	// Remove any temporary workspaces created on the host
+	for _, vol := range pipelineConfig.Volumes {
+		if vol.HostPath != nil && vol.HostPath.Remove {
+			logrus.WithField("path", vol.HostPath.Path).Debugln("removing temporary workspace from host")
+			os.RemoveAll(vol.HostPath.Path)
 		}
 	}
 

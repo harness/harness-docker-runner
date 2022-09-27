@@ -10,8 +10,10 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"strings"
 	"time"
 
+	"github.com/dchest/uniuri"
 	"github.com/harness/lite-engine/api"
 	"github.com/harness/lite-engine/engine"
 	"github.com/harness/lite-engine/engine/spec"
@@ -20,6 +22,11 @@ import (
 	"github.com/harness/lite-engine/pipeline"
 	prruntime "github.com/harness/lite-engine/pipeline/runtime"
 )
+
+// random generator function
+var random = func() string {
+	return uniuri.NewLen(20)
+}
 
 // HandleExecuteStep returns an http.HandlerFunc that executes a step
 func HandleSetup(engine *engine.Engine, stepExecutor *prruntime.StepExecutor) http.HandlerFunc {
@@ -34,16 +41,19 @@ func HandleSetup(engine *engine.Engine, stepExecutor *prruntime.StepExecutor) ht
 			return
 		}
 		id := s.ID
-		fmt.Println("Handle SetupRequest: %s", s)
+
+		fmt.Printf("step request: %+v\n", s)
+
+		updateVolumes(s)
 
 		setProxyEnvs(s.Envs)
 		state := pipeline.GetState()
-		state.Set(s.Secrets, s.LogConfig, s.TIConfig, s.SetupRequestConfig.Network.ID)
+		state.Set(s.Volumes, s.Secrets, s.LogConfig, s.TIConfig, s.SetupRequestConfig.Network.ID)
 
 		if s.MountDockerSocket == nil || *s.MountDockerSocket { // required to support m1 where docker isn't installed.
 			s.Volumes = append(s.Volumes, getDockerSockVolume())
 		}
-		s.Volumes = append(s.Volumes, getSharedVolume())
+
 		cfg := &spec.PipelineConfig{
 			Envs:    s.Envs,
 			Network: s.Network,
@@ -57,7 +67,7 @@ func HandleSetup(engine *engine.Engine, stepExecutor *prruntime.StepExecutor) ht
 		}
 
 		if err := engine.Setup(r.Context(), cfg); err != nil {
-			logger.FromRequest(r).
+			logger.FromRequest(r).WithError(err).
 				WithField("latency", time.Since(st)).
 				WithField("time", time.Now().Format(time.RFC3339)).
 				Infoln("api: failed stage setup")
@@ -87,14 +97,24 @@ func HandleSetup(engine *engine.Engine, stepExecutor *prruntime.StepExecutor) ht
 	}
 }
 
-func getSharedVolume() *spec.Volume {
-	return &spec.Volume{
-		HostPath: &spec.VolumeHostPath{
-			Name: pipeline.SharedVolName,
-			Path: pipeline.SharedVolPath,
-			ID:   "engine",
-		},
+// updates the volume paths to make them compatible with the Docker runner.
+// It hashes the clone path based on the runtime identifier.
+func updateVolumes(r api.SetupRequest) {
+	for _, v := range r.Volumes {
+		if v.HostPath != nil {
+			// Update the clone path to be created and removed once the build is completed
+			// Hash the path with a unique identifier to avoid clashes.
+			if v.HostPath.ID == "harness" {
+				v.HostPath.Create = true
+				v.HostPath.Remove = true
+				v.HostPath.Path = v.HostPath.Path + "-" + sanitize(r.ID)
+			}
+		}
 	}
+}
+
+func sanitize(r string) string {
+	return strings.ReplaceAll(r, "[-_]", "")
 }
 
 func getDockerSockVolume() *spec.Volume {

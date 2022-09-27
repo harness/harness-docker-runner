@@ -28,8 +28,10 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 )
 
+require github.com/dchest/uniuri v0.0.0-20200228104902-7aecb25e1fe5
+
 require (
-	github.com/andybalholm/brotli v1.0.1 // indirect
+	github.com/andybalholm/brotli v1.0.4 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dsnet/compress v0.0.2-0.20210315054119-f66993602bf5 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
