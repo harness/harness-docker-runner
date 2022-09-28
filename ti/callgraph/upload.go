@@ -10,6 +10,7 @@ import (
 	"io"
 	"path/filepath"
 
+	"github.com/harness/lite-engine/api"
 	"github.com/harness/lite-engine/internal/filesystem"
 	"github.com/harness/lite-engine/pipeline"
 	"github.com/harness/lite-engine/ti/avro"
@@ -29,7 +30,9 @@ func Upload(ctx context.Context, stepID string, timeMs int64, out io.Writer) err
 	log := logrus.New()
 	log.Out = out
 
-	cfg := pipeline.GetState().GetTIConfig()
+	// TODO: Remove cyclic dependency
+	// cfg := pipeline.GetState().GetTIConfig()
+	cfg := &api.TIConfig{}
 	if cfg == nil || cfg.URL == "" {
 		return fmt.Errorf("TI config is not provided in setup")
 	}

@@ -24,21 +24,21 @@ func Handler(config *config.Config, engine *engine.Engine, stepExecutor *runtime
 	// Setup stage endpoint
 	r.Mount("/setup", func() http.Handler {
 		sr := chi.NewRouter()
-		sr.Post("/", HandleSetup(engine, stepExecutor))
+		sr.Post("/", HandleSetup())
 		return sr
 	}())
 
 	// Destroy stage endpoint
 	r.Mount("/destroy", func() http.Handler {
 		sr := chi.NewRouter()
-		sr.Post("/", HandleDestroy(engine))
+		sr.Post("/", HandleDestroy())
 		return sr
 	}())
 
 	// Start step endpoint
 	r.Mount("/step", func() http.Handler {
 		sr := chi.NewRouter()
-		sr.Post("/", HandleStartStep(stepExecutor))
+		sr.Post("/", HandleStartStep())
 		return sr
 	}())
 
@@ -46,13 +46,6 @@ func Handler(config *config.Config, engine *engine.Engine, stepExecutor *runtime
 	r.Mount("/poll_step", func() http.Handler {
 		sr := chi.NewRouter()
 		sr.Post("/", HandlePollStep(stepExecutor))
-		return sr
-	}())
-
-	// Get step log output
-	r.Mount("/stream_output", func() http.Handler {
-		sr := chi.NewRouter()
-		sr.Post("/", HandleStreamOutput(stepExecutor))
 		return sr
 	}())
 

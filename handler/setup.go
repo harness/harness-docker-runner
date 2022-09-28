@@ -16,6 +16,7 @@ import (
 	"github.com/dchest/uniuri"
 	"github.com/harness/lite-engine/api"
 	"github.com/harness/lite-engine/engine"
+	"github.com/harness/lite-engine/engine/docker"
 	"github.com/harness/lite-engine/engine/spec"
 	"github.com/harness/lite-engine/executor"
 	"github.com/harness/lite-engine/logger"
@@ -29,7 +30,7 @@ var random = func() string {
 }
 
 // HandleExecuteStep returns an http.HandlerFunc that executes a step
-func HandleSetup(engine *engine.Engine, stepExecutor *prruntime.StepExecutor) http.HandlerFunc {
+func HandleSetup() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		st := time.Now()
 
@@ -41,12 +42,21 @@ func HandleSetup(engine *engine.Engine, stepExecutor *prruntime.StepExecutor) ht
 		}
 		id := s.ID
 
-		fmt.Printf("step request: %+v\n", s)
+		fmt.Printf("SETUP STAGE_ID: %s NETWORK_ID: %s\n", s.ID, s.Network.ID)
 
 		updateVolumes(s)
 
 		setProxyEnvs(s.Envs)
-		state := pipeline.GetState()
+		engine, err := engine.NewEnv(docker.Opts{})
+		if err != nil {
+			logger.FromRequest(r).WithError(err).Errorln("could not instantiate engine for the execution")
+			WriteError(w, err)
+			return
+		}
+		stepExecutor := prruntime.NewStepExecutor(engine)
+		state := pipeline.NewState()
+		s.LogConfig.IndirectUpload = true
+		s.LogConfig.URL = "http://localhost:8079"
 		state.Set(s.Volumes, s.Secrets, s.LogConfig, s.TIConfig, s.SetupRequestConfig.Network.ID)
 
 		if s.MountDockerSocket == nil || *s.MountDockerSocket { // required to support m1 where docker isn't installed.
@@ -65,28 +75,29 @@ func HandleSetup(engine *engine.Engine, stepExecutor *prruntime.StepExecutor) ht
 			EnableDockerSetup: s.MountDockerSocket,
 		}
 
-		if err := engine.Setup(r.Context(), cfg); err != nil {
-			logger.FromRequest(r).WithError(err).
-				WithField("latency", time.Since(st)).
-				WithField("time", time.Now().Format(time.RFC3339)).
-				Infoln("api: failed stage setup")
-			WriteError(w, err)
-			return
-		}
-
 		// Add the state of this execution to the executor
 		stageData := &executor.StageData{
 			Engine:       engine,
 			StepExecutor: stepExecutor,
 			State:        state,
 		}
+
 		ex := executor.GetExecutor()
 		if err := ex.Add(id, stageData); err != nil {
-			logger.FromRequest(r).Errorln(err.Error())
+			logger.FromRequest(r).WithError(err).Errorln("could not store stage data")
 			WriteError(w, err)
 			return
 		}
-		fmt.Println("Setup saved stage info for %s", id)
+
+		if err := engine.Setup(r.Context(), cfg); err != nil {
+			logger.FromRequest(r).WithError(err).
+				WithField("latency", time.Since(st)).
+				WithField("time", time.Now().Format(time.RFC3339)).
+				Infoln("api: failed stage setup")
+			WriteError(w, err)
+			ex.Remove(id)
+			return
+		}
 
 		WriteJSON(w, api.SetupResponse{IPAddress: "127.0.0.1"}, http.StatusOK)
 		logger.FromRequest(r).

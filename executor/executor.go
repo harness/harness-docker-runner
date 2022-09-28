@@ -17,8 +17,8 @@ var (
 //TODO:xun add mutex
 // Executor maps stage runtime ID to the state of the stage
 type Executor struct {
-	m map[string]*StageData
-	//TODO:xun add map to track output vars
+	m  map[string]*StageData
+	mu sync.Mutex
 }
 
 // GetExecutor returns a singleton executor object used throughout the lifecycle
@@ -34,6 +34,8 @@ func GetExecutor() *Executor {
 
 // Get returns the stage data if present, otherwise returns nil.
 func (e *Executor) Get(s string) (*StageData, error) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
 	if _, ok := e.m[s]; !ok {
 		err := fmt.Errorf("stage id %s does not exist, can not get stage info.", s)
 		return nil, err
@@ -43,6 +45,8 @@ func (e *Executor) Get(s string) (*StageData, error) {
 
 // Add maps the stage runtime ID to the stage data
 func (e *Executor) Add(s string, sd *StageData) error {
+	e.mu.Lock()
+	defer e.mu.Unlock()
 	if _, ok := e.m[s]; ok {
 		return fmt.Errorf("stage id %s already exist, can not add stage info again.", s)
 	}
@@ -51,13 +55,14 @@ func (e *Executor) Add(s string, sd *StageData) error {
 }
 
 // Remove removes the stage runtime ID from the execution list
-func (e *Executor) Remove(s string) (*StageData, error) {
-	stageData, ok := e.m[s]
-	if !ok {
-		return nil, fmt.Errorf("stage id %s does not exist, can not remove stage info.", s)
+func (e *Executor) Remove(s string) error {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if _, ok := e.m[s]; !ok {
+		return fmt.Errorf("could not remove mapping for id: %s as it doesn't exist", s)
 	}
 	delete(e.m, s)
-	return stageData, nil
+	return nil
 }
 
 // StageData stores the engine and the pipeline state corresponding to a

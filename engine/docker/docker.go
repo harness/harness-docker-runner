@@ -187,8 +187,11 @@ func (e *Docker) Destroy(ctx context.Context, pipelineConfig *spec.PipelineConfi
 	// Remove any temporary workspaces created on the host
 	for _, vol := range pipelineConfig.Volumes {
 		if vol.HostPath != nil && vol.HostPath.Remove {
-			logrus.WithField("path", vol.HostPath.Path).Debugln("removing temporary workspace from host")
-			os.RemoveAll(vol.HostPath.Path)
+			logrus.WithField("path", vol.HostPath.Path).Infoln("removing temporary workspace from host")
+			err := os.RemoveAll(vol.HostPath.Path)
+			if err != nil {
+				logrus.WithField("path", vol.HostPath.Path).WithError(err).Errorln("could not remove temporary workspace")
+			}
 		}
 	}
 

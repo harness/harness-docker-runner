@@ -16,7 +16,6 @@ import (
 	"github.com/harness/lite-engine/errors"
 	"github.com/harness/lite-engine/livelog"
 	"github.com/harness/lite-engine/logstream"
-	"github.com/harness/lite-engine/pipeline"
 
 	"github.com/drone/runner-go/pipeline/runtime"
 
@@ -57,7 +56,7 @@ func NewStepExecutor(engine *engine.Engine) *StepExecutor {
 	}
 }
 
-func (e *StepExecutor) StartStep(ctx context.Context, r *api.StartStepRequest) error {
+func (e *StepExecutor) StartStep(ctx context.Context, r *api.StartStepRequest, secrets []string, client logstream.Client) error {
 	if r.ID == "" {
 		return &errors.BadRequestError{Msg: "ID needs to be set"}
 	}
@@ -73,7 +72,7 @@ func (e *StepExecutor) StartStep(ctx context.Context, r *api.StartStepRequest) e
 	e.mu.Unlock()
 
 	go func() {
-		state, outputs, stepErr := e.executeStep(r)
+		state, outputs, stepErr := e.executeStep(r, secrets, client)
 		status := StepStatus{Status: Complete, State: state, StepErr: stepErr, Outputs: outputs}
 		e.mu.Lock()
 		e.stepStatus[r.ID] = status
@@ -229,17 +228,12 @@ func (e *StepExecutor) executeStepDrone(r *api.StartStepRequest) (*runtime.State
 	return runStep()
 }
 
-func (e *StepExecutor) executeStep(r *api.StartStepRequest) (*runtime.State, map[string]string, error) {
+func (e *StepExecutor) executeStep(r *api.StartStepRequest, secrets []string, client logstream.Client) (*runtime.State, map[string]string, error) {
 	if r.LogDrone {
 		state, err := e.executeStepDrone(r)
 		return state, nil, err
 	}
 
-	state := pipeline.GetState()
-	secrets := append(state.GetSecrets(), r.Secrets...)
-
-	// Create a log stream for step logs
-	client := state.GetLogStreamClient()
 	wc := livelog.New(client, r.LogKey, r.Name, getNudges())
 	wr := logstream.NewReplacer(wc, secrets)
 	go wr.Open() // nolint:errcheck

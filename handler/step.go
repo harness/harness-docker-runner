@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"runtime"
 	"time"
@@ -23,7 +22,7 @@ import (
 )
 
 // HandleExecuteStep returns an http.HandlerFunc that executes a step
-func HandleStartStep(e *pruntime.StepExecutor) http.HandlerFunc {
+func HandleStartStep() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		st := time.Now()
 
@@ -33,8 +32,6 @@ func HandleStartStep(e *pruntime.StepExecutor) http.HandlerFunc {
 			WriteBadRequest(w, err)
 			return
 		}
-
-		fmt.Printf("step request: %+v\n", s)
 
 		if s.MountDockerSocket == nil || *s.MountDockerSocket { // required to support m1 where docker isn't installed.
 			s.Volumes = append(s.Volumes, getDockerSockVolumeMount())
@@ -53,45 +50,41 @@ func HandleStartStep(e *pruntime.StepExecutor) http.HandlerFunc {
 		if err != nil {
 			logger.FromRequest(r).Errorln(err.Error())
 			WriteError(w, err)
+			return
 		}
 
-		e = stageData.StepExecutor
+		stageData.State.AppendSecrets(s.Secrets)
+
 		s.StartStepRequestConfig.Network = stageData.State.GetNetwork()
 		hv, err := getHarnessVolume(stageData.State.GetVolumes())
 		if err != nil {
 			WriteError(w, err)
 			return
 		}
+
+		fmt.Printf("STEP STAGE_ID: %s\n NETWORK_ID: %s\n WORKDIR: %s", s.StageRuntimeID, stageData.State.GetNetwork(), hv.HostPath.Path)
 		s.StartStepRequestConfig.WorkingDir = hv.HostPath.Path
 		for _, v := range s.StartStepRequestConfig.Volumes {
 			if v.Name == "harness" {
-				fmt.Println("name: ", v.Name)
-				fmt.Println("path: ", v.Path)
-				fmt.Println("host path: ", hv.HostPath.Name)
-				fmt.Println("host name: ", hv.HostPath.Path)
 				v.Name = hv.HostPath.Name
 				v.Path = hv.HostPath.Path
 			}
 		}
 
 		ctx := r.Context()
-		if err := e.StartStep(ctx, &s); err != nil {
+		if err := stageData.StepExecutor.StartStep(ctx, &s, stageData.State.GetSecrets(), stageData.State.GetLogStreamClient()); err != nil {
 			WriteError(w, err)
 		}
 
-		pollResp, err := e.PollStep(ctx, &api.PollStepRequest{ID: s.ID})
+		pollResp, err := stageData.StepExecutor.PollStep(ctx, &api.PollStepRequest{ID: s.ID})
 		if err != nil {
 			WriteError(w, err)
 			return
 		}
 
-		pollRespErr := pollResp.Error
-		if pollRespErr != "" {
-			fmt.Println("Response error:%s", pollResp.Error)
-			//response = api.StartStepResponse{CommandExecutionStatus: api.Failure, ErrorMessage: pollRespErr}
+		if pollResp.Error != "" {
 			WriteJSON(w, pollResp, http.StatusBadRequest)
 		} else {
-			//response = api.StartStepResponse{CommandExecutionStatus: api.Success, OutputVars: pollResp.Outputs}
 			WriteJSON(w, pollResp, http.StatusOK)
 		}
 
@@ -134,62 +127,6 @@ func HandlePollStep(e *pruntime.StepExecutor) http.HandlerFunc {
 			WithField("latency", time.Since(st)).
 			WithField("time", time.Now().Format(time.RFC3339)).
 			Infoln("api: successfully polled the step response")
-	}
-}
-
-func HandleStreamOutput(e *pruntime.StepExecutor) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		st := time.Now()
-
-		var s api.StreamOutputRequest
-		err := json.NewDecoder(r.Body).Decode(&s)
-		if err != nil {
-			WriteBadRequest(w, err)
-			return
-		}
-
-		var (
-			count  int
-			output io.Writer
-		)
-
-		oldData, newData, err := e.StreamOutput(r.Context(), &s)
-		if err != nil {
-			WriteError(w, err)
-			return
-		}
-
-		flusher, _ := w.(http.Flusher)
-		output = w
-
-		_, _ = output.Write(oldData)
-		count += len(oldData)
-		if flusher != nil {
-			flusher.Flush()
-		}
-
-	out:
-		for {
-			select {
-			case <-r.Context().Done():
-				break out
-			case data, ok := <-newData:
-				if !ok {
-					break out
-				}
-				_, _ = output.Write(data)
-				count += len(data)
-				if flusher != nil {
-					flusher.Flush()
-				}
-			}
-		}
-
-		logger.FromRequest(r).
-			WithField("latency", time.Since(st)).
-			WithField("time", time.Now().Format(time.RFC3339)).
-			WithField("count", count).
-			Infoln("api: successfully streamed the step log")
 	}
 }
 

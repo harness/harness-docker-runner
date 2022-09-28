@@ -6,6 +6,7 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -13,12 +14,11 @@ import (
 	"github.com/harness/lite-engine/executor"
 
 	"github.com/harness/lite-engine/api"
-	"github.com/harness/lite-engine/engine"
 	"github.com/harness/lite-engine/logger"
 )
 
 // HandleDestroy returns an http.HandlerFunc that destroy the stage resources
-func HandleDestroy(engine *engine.Engine) http.HandlerFunc {
+func HandleDestroy() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		st := time.Now()
 
@@ -29,31 +29,33 @@ func HandleDestroy(engine *engine.Engine) http.HandlerFunc {
 			return
 		}
 
-		ex := executor.GetExecutor()
-		stageData, err := ex.Remove(s.ID)
-		if err != nil {
-			logger.FromRequest(r).Errorln(err.Error())
-			WriteError(w, err)
-		} else {
-			fmt.Println("Destroy retrieved stage info for %s", s.ID)
+		if s.ID == "" {
+			logger.FromRequest(r).Errorln("id not specified")
+			WriteError(w, errors.New("id not specified"))
+			return
 		}
 
-		if stageData != nil {
-			if engine != stageData.Engine {
-				fmt.Println("engine not equal, stageData.Engine:%p engine:%p", stageData.Engine, engine)
-			}
-			engine = stageData.Engine
+		ex := executor.GetExecutor()
+		d, err := ex.Get(s.ID)
 
-			if err := engine.Destroy(r.Context()); err != nil {
+		fmt.Printf("DESTROY STAGE_ID: %s NETWORK_ID: %s\n", s.ID, d.State.GetNetwork())
+		if err != nil {
+			logger.FromRequest(r).WithError(err).WithField("id", s.ID).Errorln("stage mapping does not exist")
+			WriteError(w, err)
+			return
+		}
+		ex.Remove(s.ID)
+
+		if d != nil {
+			if err := d.Engine.Destroy(r.Context()); err != nil {
 				WriteError(w, err)
 			} else {
+				logger.FromRequest(r).
+					WithField("latency", time.Since(st)).
+					WithField("time", time.Now().Format(time.RFC3339)).
+					Infoln("api: successfully destroyed the stage resources")
 				WriteJSON(w, api.DestroyResponse{}, http.StatusOK)
 			}
-
-			logger.FromRequest(r).
-				WithField("latency", time.Since(st)).
-				WithField("time", time.Now().Format(time.RFC3339)).
-				Infoln("api: successfully destroyed the stage resources")
 		}
 	}
 }

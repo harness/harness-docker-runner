@@ -14,8 +14,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/harness/lite-engine/api"
 	"github.com/harness/lite-engine/internal/filesystem"
-	"github.com/harness/lite-engine/pipeline"
 	"github.com/harness/lite-engine/ti"
 	"github.com/harness/lite-engine/ti/client"
 	"github.com/pkg/errors"
@@ -82,7 +82,9 @@ func getChangedFiles(ctx context.Context, workspace string, log *logrus.Logger) 
 // to be run corresponding to that.
 func selectTests(ctx context.Context, workspace string, files []ti.File, runSelected bool, stepID string,
 	fs filesystem.FileSystem) (ti.SelectTestsResp, error) {
-	config := pipeline.GetState().GetTIConfig()
+	// TODO: Fix cyclic dependency
+	// config := pipeline.GetState().GetTIConfig()
+	config := &api.TIConfig{}
 	if config == nil || config.URL == "" {
 		return ti.SelectTestsResp{}, fmt.Errorf("TI config is not provided in setup")
 	}
@@ -156,7 +158,9 @@ func downloadFile(ctx context.Context, path, url string, fs filesystem.FileSyste
 // and if not, installs them. It returns back the directory where all the agents are installed.
 func installAgents(ctx context.Context, baseDir, language, os, arch, framework string,
 	fs filesystem.FileSystem, log *logrus.Logger) (string, error) {
-	config := pipeline.GetState().GetTIConfig()
+	// TODO: Fix cyclic dependency
+	// config := pipeline.GetState().GetTIConfig()
+	config := &api.TIConfig{}
 
 	c := client.NewHTTPClient(config.URL, config.Token, config.AccountID, config.OrgID, config.ProjectID,
 		config.PipelineID, config.BuildID, config.StageID, config.Repo, config.Sha, false)
@@ -285,7 +289,9 @@ func valid(tests []ti.RunnableTest) bool {
 }
 
 func isManualExecution() bool {
-	cfg := pipeline.GetState().GetTIConfig()
+	// TODO: Fix cyclic dependency
+	// config := pipeline.GetState().GetTIConfig()
+	cfg := &api.TIConfig{}
 	if cfg.SourceBranch == "" || cfg.TargetBranch == "" || cfg.Sha == "" {
 		return true // if any of them are not set, treat as a manual execution
 	}

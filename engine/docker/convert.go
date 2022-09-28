@@ -9,6 +9,7 @@
 package docker
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/harness/lite-engine/engine/spec"
@@ -127,6 +128,13 @@ func toHostConfig(pipelineConfig *spec.PipelineConfig, step *spec.Step) *contain
 func toNetConfig(pipelineConfig *spec.PipelineConfig, proc *spec.Step) *network.NetworkingConfig {
 	// if the user overrides the default network we do not
 	// attach to the user-defined network.
+	// // If the step network is not the same as the stage network, we don't
+	// // attach to the stage network
+	fmt.Println("proc.Network = ", proc.Network)
+	fmt.Println("pipeline.NetworkID = ", pipelineConfig.Network.ID)
+	if proc.Network != pipelineConfig.Network.ID {
+		return &network.NetworkingConfig{}
+	}
 	endpoints := map[string]*network.EndpointSettings{}
 	endpoints[pipelineConfig.Network.ID] = &network.EndpointSettings{
 		NetworkID: pipelineConfig.Network.ID,
