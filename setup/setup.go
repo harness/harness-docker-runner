@@ -42,11 +42,9 @@ func GitInstalled(instanceInfo InstanceInfo) (installed bool) {
 	default:
 		_, err := os.Stat("/usr/bin/git")
 		if os.IsNotExist(err) {
-			logrus.Infoln("git is not installed")
-			return false
+			logrus.Warnln("git is not installed")
 		}
 	}
-	logrus.Infoln("git is installed")
 	return true
 }
 

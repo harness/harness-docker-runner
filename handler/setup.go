@@ -6,7 +6,6 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"os"
 	"runtime"
@@ -41,8 +40,6 @@ func HandleSetup() http.HandlerFunc {
 			return
 		}
 		id := s.ID
-
-		fmt.Printf("SETUP STAGE_ID: %s NETWORK_ID: %s\n", s.ID, s.Network.ID)
 
 		updateVolumes(s)
 

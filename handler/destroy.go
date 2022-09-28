@@ -7,7 +7,6 @@ package handler
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -38,7 +37,6 @@ func HandleDestroy() http.HandlerFunc {
 		ex := executor.GetExecutor()
 		d, err := ex.Get(s.ID)
 
-		fmt.Printf("DESTROY STAGE_ID: %s NETWORK_ID: %s\n", s.ID, d.State.GetNetwork())
 		if err != nil {
 			logger.FromRequest(r).WithError(err).WithField("id", s.ID).Errorln("stage mapping does not exist")
 			WriteError(w, err)

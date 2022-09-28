@@ -30,12 +30,15 @@ type serverCommand struct {
 }
 
 func (c *serverCommand) run(*kingpin.ParseContext) error {
-	loadEnvErr := godotenv.Load(c.envfile)
-	if loadEnvErr != nil {
-		logrus.
-			WithError(loadEnvErr).
-			Errorln("cannot load env file")
+	if c.envfile != "" {
+		loadEnvErr := godotenv.Load(c.envfile)
+		if loadEnvErr != nil {
+			logrus.
+				WithError(loadEnvErr).
+				Errorln("cannot load env file")
+		}
 	}
+
 	// load the system configuration from the environment.
 	loadedConfig, err := config.Load()
 	if err != nil {

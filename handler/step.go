@@ -62,7 +62,6 @@ func HandleStartStep() http.HandlerFunc {
 			return
 		}
 
-		fmt.Printf("STEP STAGE_ID: %s\n NETWORK_ID: %s\n WORKDIR: %s", s.StageRuntimeID, stageData.State.GetNetwork(), hv.HostPath.Path)
 		s.StartStepRequestConfig.WorkingDir = hv.HostPath.Path
 		for _, v := range s.StartStepRequestConfig.Volumes {
 			if v.Name == "harness" {
@@ -78,20 +77,17 @@ func HandleStartStep() http.HandlerFunc {
 
 		pollResp, err := stageData.StepExecutor.PollStep(ctx, &api.PollStepRequest{ID: s.ID})
 		if err != nil {
+			// TODO: Convert this error into type pollResp
 			WriteError(w, err)
 			return
-		}
-
-		if pollResp.Error != "" {
-			WriteJSON(w, pollResp, http.StatusBadRequest)
-		} else {
-			WriteJSON(w, pollResp, http.StatusOK)
 		}
 
 		logger.FromRequest(r).
 			WithField("latency", time.Since(st)).
 			WithField("time", time.Now().Format(time.RFC3339)).
-			Infoln("api: successfully started the step")
+			Infoln("api: successfully completed step execution")
+
+		WriteJSON(w, pollResp, http.StatusOK)
 	}
 }
 
