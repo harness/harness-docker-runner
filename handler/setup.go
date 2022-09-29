@@ -52,8 +52,8 @@ func HandleSetup() http.HandlerFunc {
 		}
 		stepExecutor := prruntime.NewStepExecutor(engine)
 		state := pipeline.NewState()
-		s.LogConfig.IndirectUpload = true
-		s.LogConfig.URL = "http://localhost:8079"
+		// s.LogConfig.IndirectUpload = true
+		// s.LogConfig.URL = "http://localhost:8079"
 		state.Set(s.Volumes, s.Secrets, s.LogConfig, s.TIConfig, s.SetupRequestConfig.Network.ID)
 
 		if s.MountDockerSocket == nil || *s.MountDockerSocket { // required to support m1 where docker isn't installed.
