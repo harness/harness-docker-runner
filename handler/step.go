@@ -77,8 +77,7 @@ func HandleStartStep() http.HandlerFunc {
 
 		pollResp, err := stageData.StepExecutor.PollStep(ctx, &api.PollStepRequest{ID: s.ID})
 		if err != nil {
-			// TODO: Convert this error into type pollResp
-			WriteError(w, err)
+			WriteJSON(w, convert(err), http.StatusOK)
 			return
 		}
 
@@ -89,6 +88,13 @@ func HandleStartStep() http.HandlerFunc {
 
 		WriteJSON(w, pollResp, http.StatusOK)
 	}
+}
+
+func convert(err error) api.PollStepResponse {
+	if err == nil {
+		return api.PollStepResponse{}
+	}
+	return api.PollStepResponse{Error: err.Error()}
 }
 
 func getHarnessVolume(volumes []*spec.Volume) (*spec.Volume, error) {
