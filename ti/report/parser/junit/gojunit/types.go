@@ -9,7 +9,7 @@
 package gojunit
 
 import (
-	"github.com/harness/lite-engine/ti"
+	"github.com/harness/harness-docker-runner/ti"
 )
 
 // Totals contains aggregated results across a set of test runs. Is usually

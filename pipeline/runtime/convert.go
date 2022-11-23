@@ -5,8 +5,8 @@
 package runtime
 
 import (
-	"github.com/harness/lite-engine/api"
-	"github.com/harness/lite-engine/engine/spec"
+	"github.com/harness/harness-docker-runner/api"
+	"github.com/harness/harness-docker-runner/engine/spec"
 )
 
 // Converts api params to engine.Step

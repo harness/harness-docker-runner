@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/harness/lite-engine/engine"
-	"github.com/harness/lite-engine/pipeline"
-	"github.com/harness/lite-engine/pipeline/runtime"
+	"github.com/harness/harness-docker-runner/engine"
+	"github.com/harness/harness-docker-runner/pipeline"
+	"github.com/harness/harness-docker-runner/pipeline/runtime"
 )
 
 var (

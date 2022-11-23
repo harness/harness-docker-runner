@@ -5,7 +5,7 @@
 package api
 
 import (
-	"github.com/harness/lite-engine/engine/spec"
+	"github.com/harness/harness-docker-runner/engine/spec"
 )
 
 type CommandExecutionStatus string

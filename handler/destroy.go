@@ -10,10 +10,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/harness/lite-engine/executor"
+	"github.com/harness/harness-docker-runner/executor"
 
-	"github.com/harness/lite-engine/api"
-	"github.com/harness/lite-engine/logger"
+	"github.com/harness/harness-docker-runner/api"
+	"github.com/harness/harness-docker-runner/logger"
 )
 
 // HandleDestroy returns an http.HandlerFunc that destroy the stage resources

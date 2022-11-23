@@ -1,4 +1,4 @@
-module github.com/harness/lite-engine
+module github.com/harness/harness-docker-runner
 
 go 1.17
 

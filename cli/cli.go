@@ -7,10 +7,10 @@ package cli
 import (
 	"os"
 
-	"github.com/harness/lite-engine/cli/certs"
-	"github.com/harness/lite-engine/cli/client"
-	"github.com/harness/lite-engine/cli/server"
-	"github.com/harness/lite-engine/version"
+	"github.com/harness/harness-docker-runner/cli/certs"
+	"github.com/harness/harness-docker-runner/cli/client"
+	"github.com/harness/harness-docker-runner/cli/server"
+	"github.com/harness/harness-docker-runner/version"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 )

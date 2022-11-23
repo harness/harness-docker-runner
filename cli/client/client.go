@@ -10,11 +10,11 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/harness/lite-engine/api"
-	"github.com/harness/lite-engine/cli/certs"
-	"github.com/harness/lite-engine/config"
-	"github.com/harness/lite-engine/engine/spec"
-	"github.com/harness/lite-engine/logger"
+	"github.com/harness/harness-docker-runner/api"
+	"github.com/harness/harness-docker-runner/cli/certs"
+	"github.com/harness/harness-docker-runner/config"
+	"github.com/harness/harness-docker-runner/engine/spec"
+	"github.com/harness/harness-docker-runner/logger"
 
 	"github.com/joho/godotenv"
 	"github.com/pkg/errors"

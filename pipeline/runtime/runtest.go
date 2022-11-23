@@ -11,16 +11,17 @@ import (
 	"time"
 
 	"github.com/drone/runner-go/pipeline/runtime"
-	"github.com/harness/lite-engine/api"
-	"github.com/harness/lite-engine/engine"
-	"github.com/harness/lite-engine/pipeline"
-	"github.com/harness/lite-engine/ti/callgraph"
-	"github.com/harness/lite-engine/ti/instrumentation"
-	"github.com/harness/lite-engine/ti/report"
+	"github.com/harness/harness-docker-runner/api"
+	"github.com/harness/harness-docker-runner/engine"
+	"github.com/harness/harness-docker-runner/pipeline"
+	"github.com/harness/harness-docker-runner/ti/callgraph"
+	ticlient "github.com/harness/harness-docker-runner/ti/client"
+	"github.com/harness/harness-docker-runner/ti/instrumentation"
+	"github.com/harness/harness-docker-runner/ti/report"
 	"github.com/sirupsen/logrus"
 )
 
-func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.StartStepRequest, out io.Writer) (
+func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.StartStepRequest, out io.Writer, ticlient ticlient.Client) (
 	*runtime.State, map[string]string, error) {
 	start := time.Now()
 	cmd, err := instrumentation.GetCmd(ctx, &r.RunTest, r.Name, r.WorkingDir, out)
@@ -45,11 +46,12 @@ func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.Start
 	log.Out = out
 
 	exited, err := engine.Run(ctx, step, out)
-	if rerr := report.ParseAndUploadTests(ctx, r.TestReport, r.WorkingDir, step.Name, log); rerr != nil {
+	// TODO: Pass in the TI client here as well
+	if rerr := report.ParseAndUploadTests(ctx, r.TestReport, r.WorkingDir, step.Name, log, ticlient); rerr != nil {
 		log.WithError(rerr).Errorln("failed to upload report")
 	}
 
-	if uerr := callgraph.Upload(ctx, step.Name, time.Since(start).Milliseconds(), out); uerr != nil {
+	if uerr := callgraph.Upload(ctx, step.Name, time.Since(start).Milliseconds(), out, ticlient); uerr != nil {
 		log.WithError(uerr).Errorln("unable to collect callgraph")
 	}
 

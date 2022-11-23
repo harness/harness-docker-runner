@@ -7,9 +7,9 @@ package handler
 import (
 	"net/http"
 
-	"github.com/harness/lite-engine/api"
-	"github.com/harness/lite-engine/setup"
-	"github.com/harness/lite-engine/version"
+	"github.com/harness/harness-docker-runner/api"
+	"github.com/harness/harness-docker-runner/setup"
+	"github.com/harness/harness-docker-runner/version"
 	"github.com/sirupsen/logrus"
 )
 

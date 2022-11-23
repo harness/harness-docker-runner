@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/drone/runner-go/client"
-	"github.com/harness/lite-engine/logstream"
+	"github.com/harness/harness-docker-runner/logstream"
 )
 
 func TestLineWriterSingle(t *testing.T) {

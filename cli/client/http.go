@@ -16,8 +16,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/harness/lite-engine/api"
-	"github.com/harness/lite-engine/logger"
+	"github.com/harness/harness-docker-runner/api"
+	"github.com/harness/harness-docker-runner/logger"
 	"github.com/sirupsen/logrus"
 )
 

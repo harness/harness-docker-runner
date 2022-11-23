@@ -14,11 +14,11 @@ import (
 	"os"
 	"sync"
 
-	"github.com/harness/lite-engine/engine/docker/image"
-	"github.com/harness/lite-engine/engine/spec"
-	"github.com/harness/lite-engine/internal/docker/errors"
-	"github.com/harness/lite-engine/internal/docker/jsonmessage"
-	"github.com/harness/lite-engine/internal/docker/stdcopy"
+	"github.com/harness/harness-docker-runner/engine/docker/image"
+	"github.com/harness/harness-docker-runner/engine/spec"
+	"github.com/harness/harness-docker-runner/internal/docker/errors"
+	"github.com/harness/harness-docker-runner/internal/docker/jsonmessage"
+	"github.com/harness/harness-docker-runner/internal/docker/stdcopy"
 	"github.com/sirupsen/logrus"
 
 	"github.com/docker/docker/api/types"
@@ -181,6 +181,13 @@ func (e *Docker) Destroy(ctx context.Context, pipelineConfig *spec.PipelineConfi
 		}
 		if err := e.client.VolumeRemove(ctx, vol.EmptyDir.ID, true); err != nil {
 			logrus.WithField("volume", vol.EmptyDir.ID).WithField("error", err).Warnln("failed to remove volume")
+		}
+	}
+
+	// cleanup all created files
+	for _, f := range pipelineConfig.Files {
+		if err := os.Remove(f.Path); err != nil {
+			logrus.WithField("file", f.Path).WithField("error", err).Warnln("could not delete created file")
 		}
 	}
 

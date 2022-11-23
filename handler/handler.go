@@ -9,10 +9,10 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
-	"github.com/harness/lite-engine/config"
-	"github.com/harness/lite-engine/engine"
-	"github.com/harness/lite-engine/logger"
-	"github.com/harness/lite-engine/pipeline/runtime"
+	"github.com/harness/harness-docker-runner/config"
+	"github.com/harness/harness-docker-runner/engine"
+	"github.com/harness/harness-docker-runner/logger"
+	"github.com/harness/harness-docker-runner/pipeline/runtime"
 )
 
 // Handler returns an http.Handler that exposes the service resources.

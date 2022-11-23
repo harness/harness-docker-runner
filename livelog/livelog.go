@@ -16,7 +16,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/harness/lite-engine/logstream"
+	"github.com/harness/harness-docker-runner/logstream"
 )
 
 const (
