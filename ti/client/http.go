@@ -14,7 +14,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/harness/lite-engine/ti"
+	"github.com/harness/harness-docker-runner/ti"
 	"github.com/sirupsen/logrus"
 )
 

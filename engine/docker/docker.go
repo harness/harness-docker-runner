@@ -14,11 +14,11 @@ import (
 	"os"
 	"sync"
 
-	"github.com/harness/lite-engine/engine/docker/image"
-	"github.com/harness/lite-engine/engine/spec"
-	"github.com/harness/lite-engine/internal/docker/errors"
-	"github.com/harness/lite-engine/internal/docker/jsonmessage"
-	"github.com/harness/lite-engine/internal/docker/stdcopy"
+	"github.com/harness/harness-docker-runner/engine/docker/image"
+	"github.com/harness/harness-docker-runner/engine/spec"
+	"github.com/harness/harness-docker-runner/internal/docker/errors"
+	"github.com/harness/harness-docker-runner/internal/docker/jsonmessage"
+	"github.com/harness/harness-docker-runner/internal/docker/stdcopy"
 	"github.com/sirupsen/logrus"
 
 	"github.com/docker/docker/api/types"

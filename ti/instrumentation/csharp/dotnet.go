@@ -16,8 +16,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/harness/lite-engine/internal/filesystem"
-	"github.com/harness/lite-engine/ti"
+	"github.com/harness/harness-docker-runner/internal/filesystem"
+	"github.com/harness/harness-docker-runner/ti"
 	"github.com/mholt/archiver/v3"
 
 	"github.com/sirupsen/logrus"

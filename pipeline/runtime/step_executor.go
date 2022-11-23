@@ -11,11 +11,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/harness/lite-engine/api"
-	"github.com/harness/lite-engine/engine"
-	"github.com/harness/lite-engine/errors"
-	"github.com/harness/lite-engine/livelog"
-	"github.com/harness/lite-engine/logstream"
+	"github.com/harness/harness-docker-runner/api"
+	"github.com/harness/harness-docker-runner/engine"
+	"github.com/harness/harness-docker-runner/errors"
+	"github.com/harness/harness-docker-runner/livelog"
+	"github.com/harness/harness-docker-runner/logstream"
 
 	"github.com/drone/runner-go/pipeline/runtime"
 

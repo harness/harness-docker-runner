@@ -13,12 +13,12 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/harness/lite-engine/api"
-	"github.com/harness/lite-engine/internal/filesystem"
-	"github.com/harness/lite-engine/pipeline"
-	"github.com/harness/lite-engine/ti"
-	"github.com/harness/lite-engine/ti/instrumentation/csharp"
-	"github.com/harness/lite-engine/ti/instrumentation/java"
+	"github.com/harness/harness-docker-runner/api"
+	"github.com/harness/harness-docker-runner/internal/filesystem"
+	"github.com/harness/harness-docker-runner/pipeline"
+	"github.com/harness/harness-docker-runner/ti"
+	"github.com/harness/harness-docker-runner/ti/instrumentation/csharp"
+	"github.com/harness/harness-docker-runner/ti/instrumentation/java"
 )
 
 func GetCmd(ctx context.Context, config *api.RunTestConfig, stepID, workspace string, out io.Writer) (string, error) { // nolint:funlen, gocyclo

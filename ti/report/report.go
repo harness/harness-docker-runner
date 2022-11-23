@@ -10,9 +10,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/harness/lite-engine/api"
-	"github.com/harness/lite-engine/ti/client"
-	"github.com/harness/lite-engine/ti/report/parser/junit"
+	"github.com/harness/harness-docker-runner/api"
+	"github.com/harness/harness-docker-runner/ti/client"
+	"github.com/harness/harness-docker-runner/ti/report/parser/junit"
 	"github.com/sirupsen/logrus"
 )
 
@@ -41,7 +41,7 @@ func ParseAndUploadTests(ctx context.Context, report api.TestReport, workDir, st
 	}
 
 	// TODO: Fix the cyclic dependency
-	// config := pipeline.GetState().GetTIConfig()
+	// config := pipeline.GetTIConfig()
 	config := &api.TIConfig{}
 	if config == nil || config.URL == "" {
 		return fmt.Errorf("TI config is not provided in setup")

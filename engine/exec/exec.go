@@ -11,7 +11,7 @@ import (
 	"os/exec"
 
 	"github.com/drone/runner-go/pipeline/runtime"
-	"github.com/harness/lite-engine/engine/spec"
+	"github.com/harness/harness-docker-runner/engine/spec"
 )
 
 func Run(ctx context.Context, step *spec.Step, output io.Writer) (*runtime.State, error) {

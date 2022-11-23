@@ -11,7 +11,7 @@ package docker
 import (
 	"strings"
 
-	"github.com/harness/lite-engine/engine/spec"
+	"github.com/harness/harness-docker-runner/engine/spec"
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"

@@ -12,7 +12,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/harness/lite-engine/logstream"
+	"github.com/harness/harness-docker-runner/logstream"
 	"github.com/sirupsen/logrus"
 )
 

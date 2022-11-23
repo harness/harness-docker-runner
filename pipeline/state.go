@@ -5,11 +5,11 @@
 package pipeline
 
 import (
-	"github.com/harness/lite-engine/api"
-	"github.com/harness/lite-engine/engine/spec"
-	"github.com/harness/lite-engine/logstream"
-	"github.com/harness/lite-engine/logstream/filestore"
-	"github.com/harness/lite-engine/logstream/remote"
+	"github.com/harness/harness-docker-runner/api"
+	"github.com/harness/harness-docker-runner/engine/spec"
+	"github.com/harness/harness-docker-runner/logstream"
+	"github.com/harness/harness-docker-runner/logstream/filestore"
+	"github.com/harness/harness-docker-runner/logstream/remote"
 )
 
 const (

@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/harness/lite-engine/ti"
+	"github.com/harness/harness-docker-runner/ti"
 )
 
 // findSuites performs a depth-first search through the XML document, and

@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/harness/lite-engine/errors"
+	"github.com/harness/harness-docker-runner/errors"
 	"github.com/sirupsen/logrus"
 )
 

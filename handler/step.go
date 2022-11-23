@@ -12,13 +12,13 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/harness/lite-engine/executor"
+	"github.com/harness/harness-docker-runner/executor"
 
-	"github.com/harness/lite-engine/api"
-	"github.com/harness/lite-engine/engine"
-	"github.com/harness/lite-engine/engine/spec"
-	"github.com/harness/lite-engine/logger"
-	pruntime "github.com/harness/lite-engine/pipeline/runtime"
+	"github.com/harness/harness-docker-runner/api"
+	"github.com/harness/harness-docker-runner/engine"
+	"github.com/harness/harness-docker-runner/engine/spec"
+	"github.com/harness/harness-docker-runner/logger"
+	pruntime "github.com/harness/harness-docker-runner/pipeline/runtime"
 )
 
 // HandleExecuteStep returns an http.HandlerFunc that executes a step

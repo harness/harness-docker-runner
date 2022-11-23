@@ -8,7 +8,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/harness/lite-engine/ti"
+	"github.com/harness/harness-docker-runner/ti"
 )
 
 // Custom error

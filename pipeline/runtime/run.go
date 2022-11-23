@@ -12,10 +12,10 @@ import (
 	"github.com/drone/runner-go/pipeline/runtime"
 	"github.com/sirupsen/logrus"
 
-	"github.com/harness/lite-engine/api"
-	"github.com/harness/lite-engine/engine"
-	"github.com/harness/lite-engine/pipeline"
-	"github.com/harness/lite-engine/ti/report"
+	"github.com/harness/harness-docker-runner/api"
+	"github.com/harness/harness-docker-runner/engine"
+	"github.com/harness/harness-docker-runner/pipeline"
+	"github.com/harness/harness-docker-runner/ti/report"
 )
 
 func executeRunStep(ctx context.Context, engine *engine.Engine, r *api.StartStepRequest, out io.Writer) (

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/harness/lite-engine/internal/filesystem"
+	"github.com/harness/harness-docker-runner/internal/filesystem"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )

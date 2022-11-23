@@ -15,9 +15,9 @@ import (
 	"sync"
 
 	"github.com/drone/runner-go/pipeline/runtime"
-	"github.com/harness/lite-engine/engine/docker"
-	"github.com/harness/lite-engine/engine/exec"
-	"github.com/harness/lite-engine/engine/spec"
+	"github.com/harness/harness-docker-runner/engine/docker"
+	"github.com/harness/harness-docker-runner/engine/exec"
+	"github.com/harness/harness-docker-runner/engine/spec"
 	"github.com/pkg/errors"
 )
 

@@ -14,7 +14,7 @@ import (
 	"github.com/mattn/go-zglob"
 	"github.com/sirupsen/logrus"
 
-	"github.com/harness/lite-engine/internal/filesystem"
+	"github.com/harness/harness-docker-runner/internal/filesystem"
 )
 
 const (

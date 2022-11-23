@@ -13,14 +13,14 @@ import (
 	"time"
 
 	"github.com/dchest/uniuri"
-	"github.com/harness/lite-engine/api"
-	"github.com/harness/lite-engine/engine"
-	"github.com/harness/lite-engine/engine/docker"
-	"github.com/harness/lite-engine/engine/spec"
-	"github.com/harness/lite-engine/executor"
-	"github.com/harness/lite-engine/logger"
-	"github.com/harness/lite-engine/pipeline"
-	prruntime "github.com/harness/lite-engine/pipeline/runtime"
+	"github.com/harness/harness-docker-runner/api"
+	"github.com/harness/harness-docker-runner/engine"
+	"github.com/harness/harness-docker-runner/engine/docker"
+	"github.com/harness/harness-docker-runner/engine/spec"
+	"github.com/harness/harness-docker-runner/executor"
+	"github.com/harness/harness-docker-runner/logger"
+	"github.com/harness/harness-docker-runner/pipeline"
+	prruntime "github.com/harness/harness-docker-runner/pipeline/runtime"
 )
 
 // random generator function

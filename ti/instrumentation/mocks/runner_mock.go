@@ -11,7 +11,7 @@ package instrumentation
 import (
 	context "context"
 	gomock "github.com/golang/mock/gomock"
-	ti "github.com/harness/lite-engine/ti"
+	ti "github.com/harness/harness-docker-runner/ti"
 	reflect "reflect"
 )
 

@@ -11,12 +11,12 @@ import (
 	"time"
 
 	"github.com/drone/runner-go/pipeline/runtime"
-	"github.com/harness/lite-engine/api"
-	"github.com/harness/lite-engine/engine"
-	"github.com/harness/lite-engine/pipeline"
-	"github.com/harness/lite-engine/ti/callgraph"
-	"github.com/harness/lite-engine/ti/instrumentation"
-	"github.com/harness/lite-engine/ti/report"
+	"github.com/harness/harness-docker-runner/api"
+	"github.com/harness/harness-docker-runner/engine"
+	"github.com/harness/harness-docker-runner/pipeline"
+	"github.com/harness/harness-docker-runner/ti/callgraph"
+	"github.com/harness/harness-docker-runner/ti/instrumentation"
+	"github.com/harness/harness-docker-runner/ti/report"
 	"github.com/sirupsen/logrus"
 )
 

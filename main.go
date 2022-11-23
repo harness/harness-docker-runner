@@ -5,7 +5,7 @@
 package main
 
 import (
-	"github.com/harness/lite-engine/cli"
+	"github.com/harness/harness-docker-runner/cli"
 
 	_ "github.com/joho/godotenv/autoload"
 )
