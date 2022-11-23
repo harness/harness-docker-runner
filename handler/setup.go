@@ -60,6 +60,8 @@ func HandleSetup() http.HandlerFunc {
 			s.Volumes = append(s.Volumes, getDockerSockVolume())
 		}
 
+		s.Volumes = append(s.Volumes, getSharedVolume())
+
 		cfg := &spec.PipelineConfig{
 			Envs:    s.Envs,
 			Network: s.Network,
@@ -117,6 +119,16 @@ func updateVolumes(r api.SetupRequest) {
 				v.HostPath.Path = v.HostPath.Path + "-" + sanitize(r.ID)
 			}
 		}
+	}
+}
+
+func getSharedVolume() *spec.Volume {
+	return &spec.Volume{
+		HostPath: &spec.VolumeHostPath{
+			Name: pipeline.SharedVolName,
+			Path: pipeline.SharedVolPath,
+			ID:   "engine",
+		},
 	}
 }
 

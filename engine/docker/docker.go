@@ -184,6 +184,13 @@ func (e *Docker) Destroy(ctx context.Context, pipelineConfig *spec.PipelineConfi
 		}
 	}
 
+	// cleanup all created files
+	for _, f := range pipelineConfig.Files {
+		if err := os.Remove(f.Path); err != nil {
+			logrus.WithField("file", f.Path).WithField("error", err).Warnln("could not delete created file")
+		}
+	}
+
 	// Remove any temporary workspaces created on the host
 	for _, vol := range pipelineConfig.Volumes {
 		if vol.HostPath != nil && vol.HostPath.Remove {

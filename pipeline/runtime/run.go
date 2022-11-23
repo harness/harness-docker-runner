@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 
 	"github.com/drone/runner-go/pipeline/runtime"
 	"github.com/sirupsen/logrus"
@@ -48,6 +49,10 @@ func executeRunStep(ctx context.Context, engine *engine.Engine, r *api.StartStep
 			outputs, err := fetchOutputVariables(outputFile, out) // nolint:govet
 			if err != nil {
 				return exited, nil, err
+			}
+			// Delete output variable file
+			if ferr := os.Remove(outputFile); ferr != nil {
+				logrus.WithError(ferr).WithField("file", outputFile).Warnln("could not remove output file")
 			}
 			return exited, outputs, err
 		}

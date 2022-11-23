@@ -7,12 +7,12 @@ package handler
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"runtime"
 	"time"
 
 	"github.com/harness/harness-docker-runner/executor"
+	"github.com/harness/harness-docker-runner/pipeline"
 
 	"github.com/harness/harness-docker-runner/api"
 	"github.com/harness/harness-docker-runner/engine"
@@ -36,15 +36,6 @@ func HandleStartStep() http.HandlerFunc {
 		if s.MountDockerSocket == nil || *s.MountDockerSocket { // required to support m1 where docker isn't installed.
 			s.Volumes = append(s.Volumes, getDockerSockVolumeMount())
 		}
-		if len(s.StartStepRequestConfig.OutputVars) > 0 {
-			s.Files = []*spec.File{
-				{
-					Path:  fmt.Sprintf("/tmp/engine/%s.out", s.ID),
-					IsDir: false,
-					Mode:  0777,
-				},
-			}
-		}
 		ex := executor.GetExecutor()
 		stageData, err := ex.Get(s.StageRuntimeID)
 		if err != nil {
@@ -52,6 +43,7 @@ func HandleStartStep() http.HandlerFunc {
 			WriteError(w, err)
 			return
 		}
+		s.Volumes = append(s.Volumes, getSharedVolumeMount())
 
 		stageData.State.AppendSecrets(s.Secrets)
 
@@ -95,6 +87,13 @@ func convert(err error) api.PollStepResponse {
 		return api.PollStepResponse{}
 	}
 	return api.PollStepResponse{Error: err.Error()}
+}
+
+func getSharedVolumeMount() *spec.VolumeMount {
+	return &spec.VolumeMount{
+		Name: pipeline.SharedVolName,
+		Path: pipeline.SharedVolPath,
+	}
 }
 
 func getHarnessVolume(volumes []*spec.Volume) (*spec.Volume, error) {
