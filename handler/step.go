@@ -71,7 +71,7 @@ func HandleStartStep() http.HandlerFunc {
 		}
 
 		ctx := r.Context()
-		if err := stageData.StepExecutor.StartStep(ctx, &s, stageData.State.GetSecrets(), stageData.State.GetLogStreamClient()); err != nil {
+		if err := stageData.StepExecutor.StartStep(ctx, &s, stageData.State.GetSecrets(), stageData.State.GetLogStreamClient(), stageData.State.GetTiClient()); err != nil {
 			WriteError(w, err)
 		}
 

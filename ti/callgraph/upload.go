@@ -26,11 +26,11 @@ const (
 )
 
 // Upload method uploads the callgraph.
-func Upload(ctx context.Context, stepID string, timeMs int64, out io.Writer) error {
+func Upload(ctx context.Context, stepID string, timeMs int64, out io.Writer, ticlient client.Client) error {
 	log := logrus.New()
 	log.Out = out
 
-	// TODO: Remove cyclic dependency
+	// TODO: Pass in the config here and use that, right now it will be empty
 	// cfg := pipeline.GetState().GetTIConfig()
 	cfg := &api.TIConfig{}
 	if cfg == nil || cfg.URL == "" {
@@ -62,9 +62,7 @@ func Upload(ctx context.Context, stepID string, timeMs int64, out io.Writer) err
 		return errors.Wrap(err, "failed to get avro encoded callgraph")
 	}
 
-	c := client.NewHTTPClient(cfg.URL, cfg.Token, cfg.AccountID, cfg.OrgID, cfg.ProjectID,
-		cfg.PipelineID, cfg.BuildID, cfg.StageID, cfg.Repo, cfg.Sha, false)
-	return c.UploadCg(ctx, stepID, source, target, timeMs, encCg)
+	return ticlient.UploadCg(ctx, stepID, source, target, timeMs, encCg)
 }
 
 // encodeCg reads all files of specified format from datadir folder and returns byte array of avro encoded format

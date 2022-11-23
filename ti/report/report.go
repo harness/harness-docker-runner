@@ -16,7 +16,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func ParseAndUploadTests(ctx context.Context, report api.TestReport, workDir, stepID string, log *logrus.Logger) error {
+func ParseAndUploadTests(ctx context.Context, report api.TestReport, workDir, stepID string, log *logrus.Logger, ticlient client.Client) error {
 	if report.Kind != api.Junit {
 		return fmt.Errorf("unknown report type: %s", report.Kind)
 	}
@@ -40,14 +40,5 @@ func ParseAndUploadTests(ctx context.Context, report api.TestReport, workDir, st
 		return nil
 	}
 
-	// TODO: Fix the cyclic dependency
-	// config := pipeline.GetTIConfig()
-	config := &api.TIConfig{}
-	if config == nil || config.URL == "" {
-		return fmt.Errorf("TI config is not provided in setup")
-	}
-
-	c := client.NewHTTPClient(config.URL, config.Token, config.AccountID, config.OrgID, config.ProjectID,
-		config.PipelineID, config.BuildID, config.StageID, config.Repo, config.Sha, false)
-	return c.Write(ctx, stepID, strings.ToLower(report.Kind.String()), tests)
+	return ticlient.Write(ctx, stepID, strings.ToLower(report.Kind.String()), tests)
 }
