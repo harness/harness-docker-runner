@@ -8,7 +8,9 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"path/filepath"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/harness/harness-docker-runner/executor"
@@ -62,6 +64,8 @@ func HandleStartStep() http.HandlerFunc {
 			}
 		}
 
+		updateGitCloneConfig(&s.StartStepRequestConfig)
+
 		ctx := r.Context()
 		if err := stageData.StepExecutor.StartStep(ctx, &s, stageData.State.GetSecrets(), stageData.State.GetLogStreamClient(), stageData.State.GetTiClient()); err != nil {
 			WriteError(w, err)
@@ -96,6 +100,7 @@ func getSharedVolumeMount() *spec.VolumeMount {
 	}
 }
 
+// this returns back the host volume which is being used to clone repositories
 func getHarnessVolume(volumes []*spec.Volume) (*spec.Volume, error) {
 	for _, v := range volumes {
 		if v.HostPath != nil {
@@ -128,6 +133,28 @@ func HandlePollStep(e *pruntime.StepExecutor) http.HandlerFunc {
 			WithField("latency", time.Since(st)).
 			WithField("time", time.Now().Format(time.RFC3339)).
 			Infoln("api: successfully polled the step response")
+	}
+}
+
+// TODO: Move this logic to Java so that we pass in the right arguments to the runner
+func updateGitCloneConfig(s *api.StartStepRequestConfig) {
+	if strings.Contains(s.Image, "harness/drone-git") {
+		if ws, ok := s.Envs["DRONE_WORKSPACE"]; ok {
+			// If it's an explicit git clone step, make sure the workspace is namespaced
+			if strings.HasPrefix(ws, "/harness") || strings.HasPrefix(ws, "/tmp/harness") {
+				last := ws[strings.LastIndex(ws, "/")+1:]
+				if last == "" {
+					// Retrieve the name from the remote URL. Eg: https://github.com/harness/drone-git should return drone-git
+					if url, ok2 := s.Envs["DRONE_REMOTE_URL"]; ok2 {
+						last = url[strings.LastIndex(url, "/")+1:]
+					}
+				}
+				ws := filepath.Join(s.WorkingDir, last)
+				s.Envs["DRONE_WORKSPACE"] = ws
+			} else if !filepath.IsAbs(ws) {
+				s.Envs["DRONE_WORKSPACE"] = filepath.Join(s.WorkingDir, ws)
+			}
+		}
 	}
 }
 
