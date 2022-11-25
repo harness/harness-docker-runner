@@ -39,7 +39,10 @@ func executeRunStep(ctx context.Context, engine *engine.Engine, r *api.StartStep
 	log := logrus.New()
 	log.Out = out
 
+	logrus.WithField("step_id", r.ID).WithField("stage_id", r.StageRuntimeID).Traceln("starting step run")
+
 	exited, err := engine.Run(ctx, step, out)
+	logrus.WithField("step_id", r.ID).WithField("stage_id", r.StageRuntimeID).Traceln("completed step run")
 	if rerr := report.ParseAndUploadTests(ctx, r.TestReport, r.WorkingDir, step.Name, log, ticlient); rerr != nil {
 		logrus.WithError(rerr).WithField("step", step.Name).Errorln("failed to upload report")
 	}

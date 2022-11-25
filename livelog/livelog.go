@@ -159,7 +159,6 @@ func (b *Writer) Open() error {
 		return err
 	}
 	logrus.WithField("name", b.name).Infoln("successfully opened log stream")
-	b.opened = true
 	return nil
 }
 
@@ -193,9 +192,6 @@ func (b *Writer) upload() error {
 
 // flush batch uploads all buffered logs to the server.
 func (b *Writer) flush() error {
-	if !b.opened {
-		return nil
-	}
 	b.mu.Lock()
 	lines := b.copy()
 	b.clear()

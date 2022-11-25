@@ -222,16 +222,19 @@ func (e *Docker) Destroy(ctx context.Context, pipelineConfig *spec.PipelineConfi
 func (e *Docker) Run(ctx context.Context, pipelineConfig *spec.PipelineConfig, step *spec.Step,
 	output io.Writer) (*runtime.State, error) {
 	// create the container
+	logrus.WithField("step_id", step.ID).Traceln("creating the container")
 	err := e.create(ctx, pipelineConfig, step, output)
 	if err != nil {
 		return nil, errors.TrimExtraInfo(err)
 	}
 	// start the container
+	logrus.WithField("step_id", step.ID).Traceln("starting the container")
 	err = e.start(ctx, step.ID)
 	if err != nil {
 		return nil, errors.TrimExtraInfo(err)
 	}
 	// tail the container
+	logrus.WithField("step_id", step.ID).Traceln("tailing the container")
 	err = e.tail(ctx, step.ID, output)
 	if err != nil {
 		return nil, errors.TrimExtraInfo(err)

@@ -237,7 +237,10 @@ func (e *StepExecutor) executeStep(r *api.StartStepRequest, secrets []string, cl
 
 	wc := livelog.New(client, r.LogKey, r.Name, getNudges())
 	wr := logstream.NewReplacer(wc, secrets)
-	go wr.Open() // nolint:errcheck
+	err := wr.Open() // nolint:errcheck
+	if err != nil {
+		logrus.WithError(err).WithField("key", r.LogKey).Errorln("could not open log stream")
+	}
 
 	// if the step is configured as a daemon, it is detached
 	// from the main process and executed separately.

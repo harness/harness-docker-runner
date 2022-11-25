@@ -66,12 +66,21 @@ func HandleStartStep() http.HandlerFunc {
 
 		updateGitCloneConfig(&s.StartStepRequestConfig)
 
+		// fmt.Printf("start step request config: %+v\n", s.StartStepRequestConfig)
+
 		ctx := r.Context()
+		logger.FromRequest(r).WithField("stage_id", s.StageRuntimeID).
+			WithField("step_id", s.ID).Traceln("starting step execution")
 		if err := stageData.StepExecutor.StartStep(ctx, &s, stageData.State.GetSecrets(), stageData.State.GetLogStreamClient(), stageData.State.GetTiClient()); err != nil {
 			WriteError(w, err)
 		}
 
+		logger.FromRequest(r).WithField("stage_id", s.StageRuntimeID).
+			WithField("step_id", s.ID).Traceln("starting polling for step response")
+
 		pollResp, err := stageData.StepExecutor.PollStep(ctx, &api.PollStepRequest{ID: s.ID})
+		logger.FromRequest(r).WithField("stage_id", s.StageRuntimeID).
+			WithField("step_id", s.ID).Traceln("received polling response")
 		if err != nil {
 			WriteJSON(w, convert(err), http.StatusOK)
 			return
