@@ -45,6 +45,7 @@ func HandleDestroy() http.HandlerFunc {
 		ex.Remove(s.ID)
 
 		if d != nil {
+			logger.FromRequest(r).WithField("id", s.ID).Traceln("starting the destroy process")
 			if err := d.Engine.Destroy(r.Context()); err != nil {
 				WriteError(w, err)
 			} else {

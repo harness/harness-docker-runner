@@ -10,8 +10,8 @@ import (
 
 // Config provides the system configuration.
 type Config struct {
-	Debug      bool   `envconfig:"DEBUG"`
-	Trace      bool   `envconfig:"TRACE"`
+	Debug      bool   `envconfig:"DRONE_DEBUG"`
+	Trace      bool   `envconfig:"DRONE_TRACE"`
 	ServerName string `envconfig:"SERVER_NAME" default:"drone"`
 
 	Server struct {

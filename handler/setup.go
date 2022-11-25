@@ -60,6 +60,7 @@ func HandleSetup() http.HandlerFunc {
 			s.Volumes = append(s.Volumes, getDockerSockVolume())
 		}
 
+		// fmt.Printf("setup request config: %+v\n", s.SetupRequestConfig)
 		s.Volumes = append(s.Volumes, getSharedVolume())
 
 		cfg := &spec.PipelineConfig{
@@ -88,6 +89,8 @@ func HandleSetup() http.HandlerFunc {
 			return
 		}
 
+		logger.FromRequest(r).Traceln("starting the setup process")
+
 		if err := engine.Setup(r.Context(), cfg); err != nil {
 			logger.FromRequest(r).WithError(err).
 				WithField("latency", time.Since(st)).
@@ -97,6 +100,8 @@ func HandleSetup() http.HandlerFunc {
 			ex.Remove(id)
 			return
 		}
+
+		logger.FromRequest(r).Traceln("completed the setup process")
 
 		WriteJSON(w, api.SetupResponse{IPAddress: "127.0.0.1"}, http.StatusOK)
 		logger.FromRequest(r).
