@@ -86,12 +86,12 @@ func HandleStartStep() http.HandlerFunc {
 			return
 		}
 
+		WriteJSON(w, pollResp, http.StatusOK)
+
 		logger.FromRequest(r).
 			WithField("latency", time.Since(st)).
 			WithField("time", time.Now().Format(time.RFC3339)).
 			Infoln("api: successfully completed step execution")
-
-		WriteJSON(w, pollResp, http.StatusOK)
 	}
 }
 

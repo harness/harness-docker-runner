@@ -11,6 +11,8 @@ import (
 	"crypto/tls"
 	"net/http"
 
+	"github.com/harness/harness-docker-runner/version"
+
 	"github.com/docker/go-connections/tlsconfig"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
@@ -32,11 +34,11 @@ func (s *Server) Start(ctx context.Context) error {
 	// Uncomment the following line for local run
 	s.Insecure = true
 
+	logrus.Infof("Runner version: %s", version.Version)
+
 	var tlsConfig *tls.Config
 	if s.Insecure {
 		tlsConfig = nil
-		logrus.Warnln("RUNNING IN INSECURE MODE")
-		logrus.Warnln("RUNNING IN INSECURE MODE")
 		logrus.Warnln("RUNNING IN INSECURE MODE")
 	} else {
 		tlsOptions := tlsconfig.Options{

@@ -46,7 +46,6 @@ func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.Start
 	log.Out = out
 
 	exited, err := engine.Run(ctx, step, out)
-	// TODO: Pass in the TI client here as well
 	if rerr := report.ParseAndUploadTests(ctx, r.TestReport, r.WorkingDir, step.Name, log, ticlient); rerr != nil {
 		log.WithError(rerr).Errorln("failed to upload report")
 	}
