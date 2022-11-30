@@ -1,31 +1,21 @@
-# Lite-engine
+# Harness Docker Runner
 
-How to use:
+## Build and usage
+Linux
 
-* Create an .env file. It can be empty.
-* To build linux and windows `GOOS=windows go build -o lite-engine.exe; go build`
-* Generate tls credentials: go run main.go certs
-* Start server: go run main.go server
-* Client call to check health status of server: go run main.go client.
+    # GOARCH=amd64 go build -o harness-docker-runner-linux-amd64
+    # chmod +x harness-docker-runner-linux-amd64
+    # ./harness-docker-runner-linux-amd64 server
+    
+macOS
 
-## Release procedure
+    # GOOS=darwin GOARCH=amd64 go build -o harness-docker-runner-darwin-amd64
+    # ./harness-docker-runner-darwin-amd64 server
 
-Run the changelog generator.
+Windows
 
-```BASH
-docker run -it --rm -v "$(pwd)":/usr/local/src/your-app githubchangeloggenerator/github-changelog-generator -u harness -p lite-engine -t <secret github token>
-```
+    # GOOS=windows go build -o harness-docker-runner.exe
+    # harness-docker-runner.exe server
 
-You can generate a token by logging into your GitHub account and going to Settings -> Personal access tokens.
 
-Next we tag the PR's with the fixes or enhancements labels. If the PR does not fulfil the requirements, do not add a label.
-
-**Before moving on make sure to update the version file `version/version.go`.**
-
-Run the changelog generator again with the future version according to semver.
-
-```BASH
-docker run -it --rm -v "$(pwd)":/usr/local/src/your-app githubchangeloggenerator/github-changelog-generator -u harness -p lite-engine -t <secret token> --future-release v0.2.0
-```
-
-Create your pull request for the release. Get it merged then tag the release.
+## [](https://github.com/harness/harness-docker-runner#release-procedure)Release procedure (TBD)
