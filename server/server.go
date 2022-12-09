@@ -37,6 +37,7 @@ func (s *Server) Start(ctx context.Context) error {
 	logrus.Infof("Runner version: %s", version.Version)
 
 	var tlsConfig *tls.Config
+	logrus.Infof("Runner version: %s", version.Version)
 	if s.Insecure {
 		tlsConfig = nil
 		logrus.Warnln("RUNNING IN INSECURE MODE")

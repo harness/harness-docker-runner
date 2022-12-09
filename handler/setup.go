@@ -18,9 +18,12 @@ import (
 	"github.com/harness/harness-docker-runner/engine/docker"
 	"github.com/harness/harness-docker-runner/engine/spec"
 	"github.com/harness/harness-docker-runner/executor"
+	"github.com/harness/harness-docker-runner/livelog"
 	"github.com/harness/harness-docker-runner/logger"
 	"github.com/harness/harness-docker-runner/pipeline"
 	prruntime "github.com/harness/harness-docker-runner/pipeline/runtime"
+
+	"github.com/sirupsen/logrus"
 )
 
 // random generator function
@@ -56,6 +59,28 @@ func HandleSetup() http.HandlerFunc {
 		// s.LogConfig.URL = "http://localhost:8079"
 		state.Set(s.Volumes, s.Secrets, s.LogConfig, s.TIConfig, s.SetupRequestConfig.Network.ID)
 
+		log := logrus.New()
+		var logr *logrus.Entry
+		if s.LogConfig.URL == "" {
+			log.Out = os.Stdout
+		} else {
+			client := state.GetLogStreamClient()
+			wc := livelog.New(client, s.LogKey, id, nil)
+			defer func() {
+				if err := wc.Close(); err != nil {
+					logrus.WithError(err).Debugln("failed to close log stream")
+				}
+			}()
+
+			log.Out = wc
+			log.SetLevel(logrus.TraceLevel)
+		}
+		logr = log.WithField("id", s.ID).
+			WithField("correlation_id", s.CorrelationID)
+
+		logr.Traceln("starting setup execution")
+		logger.FromRequest(r).Traceln("starting the setup process")
+
 		if s.MountDockerSocket == nil || *s.MountDockerSocket { // required to support m1 where docker isn't installed.
 			s.Volumes = append(s.Volumes, getDockerSockVolume())
 		}
@@ -89,8 +114,6 @@ func HandleSetup() http.HandlerFunc {
 			return
 		}
 
-		logger.FromRequest(r).Traceln("starting the setup process")
-
 		if err := engine.Setup(r.Context(), cfg); err != nil {
 			logger.FromRequest(r).WithError(err).
 				WithField("latency", time.Since(st)).
@@ -101,13 +124,14 @@ func HandleSetup() http.HandlerFunc {
 			return
 		}
 
-		logger.FromRequest(r).Traceln("completed the setup process")
-
 		WriteJSON(w, api.SetupResponse{IPAddress: "127.0.0.1"}, http.StatusOK)
 		logger.FromRequest(r).
 			WithField("latency", time.Since(st)).
 			WithField("time", time.Now().Format(time.RFC3339)).
 			Infoln("api: successfully completed the stage setup")
+
+		logger.FromRequest(r).Traceln("completed the setup process")
+		logr.Traceln("completed the setup process")
 	}
 }
 

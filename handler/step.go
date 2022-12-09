@@ -80,7 +80,8 @@ func HandleStartStep() http.HandlerFunc {
 
 		pollResp, err := stageData.StepExecutor.PollStep(ctx, &api.PollStepRequest{ID: s.ID})
 		logger.FromRequest(r).WithField("stage_id", s.StageRuntimeID).
-			WithField("step_id", s.ID).Traceln("received polling response")
+			WithField("step_id", s.ID).WithField("poll_response", pollResp).
+			Traceln("received polling response")
 		if err != nil {
 			WriteJSON(w, convert(err), http.StatusOK)
 			return
