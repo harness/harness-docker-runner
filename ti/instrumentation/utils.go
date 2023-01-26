@@ -81,15 +81,12 @@ func getChangedFiles(ctx context.Context, workspace string, log *logrus.Logger) 
 // selectTests takes a list of files which were changed as input and gets the tests
 // to be run corresponding to that.
 func selectTests(ctx context.Context, workspace string, files []ti.File, runSelected bool, stepID string,
-	fs filesystem.FileSystem) (ti.SelectTestsResp, error) {
-	// TODO: Fix cyclic dependency
-	// config := pipeline.GetState().GetTIConfig()
-	config := &api.TIConfig{}
-	if config == nil || config.URL == "" {
+	fs filesystem.FileSystem, config api.TIConfig) (ti.SelectTestsResp, error) {
+	if config.URL == "" {
 		return ti.SelectTestsResp{}, fmt.Errorf("TI config is not provided in setup")
 	}
 
-	isManual := isManualExecution()
+	isManual := isManualExecution(config)
 	source := config.SourceBranch
 	if source == "" && !isManual {
 		return ti.SelectTestsResp{}, fmt.Errorf("source branch is not set")
@@ -157,15 +154,18 @@ func downloadFile(ctx context.Context, path, url string, fs filesystem.FileSyste
 // installAgents checks if the required artifacts are installed for the language
 // and if not, installs them. It returns back the directory where all the agents are installed.
 func installAgents(ctx context.Context, baseDir, language, os, arch, framework string,
-	fs filesystem.FileSystem, log *logrus.Logger) (string, error) {
-	// TODO: Fix cyclic dependency
-	// config := pipeline.GetState().GetTIConfig()
-	config := &api.TIConfig{}
-
+	fs filesystem.FileSystem, log *logrus.Logger, config api.TIConfig) (string, error) {
+	fmt.Printf("Reading TI config from pipeline state %s", config)
 	c := client.NewHTTPClient(config.URL, config.Token, config.AccountID, config.OrgID, config.ProjectID,
 		config.PipelineID, config.BuildID, config.StageID, config.Repo, config.Sha, false)
 	log.Infoln("getting TI agent artifact download links")
 	links, err := c.DownloadLink(ctx, language, os, arch, framework)
+	links = []ti.DownloadLink{
+		{
+			URL:     "https://storage.googleapis.com/harness-ti/local/java-agent.jar",
+			RelPath: "java/java-agent.jar",
+		},
+	}
 	if err != nil {
 		log.WithError(err).Println("could not fetch download links for artifact download")
 		return "", err
@@ -288,10 +288,7 @@ func valid(tests []ti.RunnableTest) bool {
 	return true
 }
 
-func isManualExecution() bool {
-	// TODO: Fix cyclic dependency
-	// config := pipeline.GetState().GetTIConfig()
-	cfg := &api.TIConfig{}
+func isManualExecution(cfg api.TIConfig) bool {
 	if cfg.SourceBranch == "" || cfg.TargetBranch == "" || cfg.Sha == "" {
 		return true // if any of them are not set, treat as a manual execution
 	}
