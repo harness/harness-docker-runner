@@ -32,7 +32,7 @@ type Server struct {
 // Start initializes a server to respond to HTTPS/TLS network requests.
 func (s *Server) Start(ctx context.Context) error {
 	// Uncomment the following line for local run
-	s.Insecure = true
+	// s.Insecure = true
 
 	logrus.Infof("Runner version: %s", version.Version)
 
@@ -66,7 +66,7 @@ func (s *Server) Start(ctx context.Context) error {
 	var g errgroup.Group
 	g.Go(func() error {
 		// Uncomment the following line for local run
-		s.Insecure = true
+		// s.Insecure = true
 
 		if s.Insecure {
 			return srv.ListenAndServe()
