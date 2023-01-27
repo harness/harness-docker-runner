@@ -17,7 +17,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func ParseAndUploadTests(ctx context.Context, report api.TestReport, workDir, stepID string, log *logrus.Logger, start time.Time, tiConfig *api.TIConfig) error {
+func ParseAndUploadTests(ctx context.Context, report api.TestReport, workDir, stepID string, log *logrus.Logger, start time.Time, tiConfig api.TIConfig) error {
 	if report.Kind != api.Junit {
 		return fmt.Errorf("unknown report type: %s", report.Kind)
 	}
@@ -39,6 +39,10 @@ func ParseAndUploadTests(ctx context.Context, report api.TestReport, workDir, st
 	tests := junit.ParseTests(report.Junit.Paths, log)
 	if len(tests) == 0 {
 		return nil
+	}
+
+	if tiConfig.URL == "" {
+		return fmt.Errorf("TI config is not provided in setup")
 	}
 
 	c := client.NewHTTPClient(tiConfig.URL, tiConfig.Token, tiConfig.AccountID, tiConfig.OrgID, tiConfig.ProjectID,

@@ -7,7 +7,6 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/harness/harness-docker-runner/ti"
 	"net/http"
 	"os"
 	"runtime"
@@ -24,6 +23,7 @@ import (
 	"github.com/harness/harness-docker-runner/logger"
 	"github.com/harness/harness-docker-runner/pipeline"
 	prruntime "github.com/harness/harness-docker-runner/pipeline/runtime"
+	"github.com/harness/harness-docker-runner/ti"
 
 	"github.com/sirupsen/logrus"
 )
@@ -33,7 +33,8 @@ var random = func() string {
 	return uniuri.NewLen(20)
 }
 
-// HandleSetup returns an http.HandlerFunc that executes a step
+// HandleSetup returns an http.HandlerFunc that does the initial setup
+// for executing the step
 func HandleSetup() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		st := time.Now()
@@ -48,7 +49,7 @@ func HandleSetup() http.HandlerFunc {
 
 		updateVolumes(s)
 
-		// Add ti volume where all the TI related data (CG, test reports) will be stored
+		// Add ti volume where all the TI related data (CG, Agent logs, config) will be stored
 		// Add this dir to TIConfig for uploading the data
 		tiVolume := getTiVolume(s.ID)
 		s.Volumes = append(s.Volumes, tiVolume)
@@ -167,8 +168,9 @@ func getSharedVolume() *spec.Volume {
 	}
 }
 
+// getTiVolume returns a volume (directory) which is used to store TI related data
 func getTiVolume(setupID string) *spec.Volume {
-	tiDir := fmt.Sprintf("%s-%s", ti.VolumeName, sanitize(setupID))
+	tiDir := fmt.Sprintf("%s-%s", ti.VolumePath, sanitize(setupID))
 	return &spec.Volume{
 		HostPath: &spec.VolumeHostPath{
 			Name:   ti.VolumeName,

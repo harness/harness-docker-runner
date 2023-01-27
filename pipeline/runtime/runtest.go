@@ -45,7 +45,7 @@ func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.Start
 	log.Out = out
 
 	exited, err := engine.Run(ctx, step, out)
-	if rerr := report.ParseAndUploadTests(ctx, r.TestReport, r.WorkingDir, step.Name, log, time.Now(), &tiConfig); rerr != nil {
+	if rerr := report.ParseAndUploadTests(ctx, r.TestReport, r.WorkingDir, step.Name, log, time.Now(), tiConfig); rerr != nil {
 		log.WithError(rerr).Errorln("failed to upload report")
 	}
 

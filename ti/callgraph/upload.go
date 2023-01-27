@@ -7,14 +7,14 @@ package callgraph
 import (
 	"context"
 	"fmt"
-	"github.com/harness/harness-docker-runner/api"
-	"github.com/harness/harness-docker-runner/ti/client"
 	"io"
 	"path/filepath"
 	"time"
 
+	"github.com/harness/harness-docker-runner/api"
 	"github.com/harness/harness-docker-runner/internal/filesystem"
 	"github.com/harness/harness-docker-runner/ti/avro"
+	"github.com/harness/harness-docker-runner/ti/client"
 	"github.com/mattn/go-zglob"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -121,5 +121,3 @@ func getCgFiles(dir, ext1, ext2 string, log *logrus.Logger) ([]string, []string,
 	}
 	return cgFiles, visFiles, nil
 }
-
-//mvn -am -DharnessArgLine=-javaagent:/tmp/engine/ti-exhPYnq9SZqIn_9ocXu2Fw/java/java-agent.jar=/tmp/engine/ti-exhPYnq9SZqIn_9ocXu2Fw/config.ini -DargLine=-javaagent:/tmp/engine/ti-exhPYnq9SZqIn_9ocXu2Fw/java/java-agent.jar=/tmp/engine/ti-exhPYnq9SZqIn_9ocXu2Fw/config.ini test

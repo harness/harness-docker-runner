@@ -5,7 +5,9 @@
 package ti
 
 const (
-	VolumeName = "/tmp/ti"
+	VolumeName = "ti"
+
+	VolumePath = "/tmp/ti"
 
 	// StatusPassed represents a passed test.
 	StatusPassed = "passed"
