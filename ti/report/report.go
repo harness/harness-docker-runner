@@ -7,16 +7,17 @@ package report
 import (
 	"context"
 	"fmt"
+	"github.com/harness/harness-docker-runner/ti/client"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/harness/harness-docker-runner/api"
-	"github.com/harness/harness-docker-runner/ti/client"
 	"github.com/harness/harness-docker-runner/ti/report/parser/junit"
 	"github.com/sirupsen/logrus"
 )
 
-func ParseAndUploadTests(ctx context.Context, report api.TestReport, workDir, stepID string, log *logrus.Logger, ticlient client.Client) error {
+func ParseAndUploadTests(ctx context.Context, report api.TestReport, workDir, stepID string, log *logrus.Logger, start time.Time, tiConfig api.TIConfig) error {
 	if report.Kind != api.Junit {
 		return fmt.Errorf("unknown report type: %s", report.Kind)
 	}
@@ -40,5 +41,15 @@ func ParseAndUploadTests(ctx context.Context, report api.TestReport, workDir, st
 		return nil
 	}
 
-	return ticlient.Write(ctx, stepID, strings.ToLower(report.Kind.String()), tests)
+	if tiConfig.URL == "" {
+		return fmt.Errorf("TI config is not provided in setup")
+	}
+
+	c := client.NewHTTPClient(tiConfig.URL, tiConfig.Token, tiConfig.AccountID, tiConfig.OrgID, tiConfig.ProjectID,
+		tiConfig.PipelineID, tiConfig.BuildID, tiConfig.StageID, tiConfig.Repo, tiConfig.Sha, false)
+	if err := c.Write(ctx, stepID, strings.ToLower(report.Kind.String()), tests); err != nil {
+		return err
+	}
+	log.Infoln(fmt.Sprintf("Successfully collected test reports in %s time", time.Since(start)))
+	return nil
 }

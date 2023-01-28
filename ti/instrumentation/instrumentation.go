@@ -15,22 +15,21 @@ import (
 
 	"github.com/harness/harness-docker-runner/api"
 	"github.com/harness/harness-docker-runner/internal/filesystem"
-	"github.com/harness/harness-docker-runner/pipeline"
 	"github.com/harness/harness-docker-runner/ti"
 	"github.com/harness/harness-docker-runner/ti/instrumentation/csharp"
 	"github.com/harness/harness-docker-runner/ti/instrumentation/java"
 )
 
-func GetCmd(ctx context.Context, config *api.RunTestConfig, stepID, workspace string, out io.Writer) (string, error) { // nolint:funlen, gocyclo
+func GetCmd(ctx context.Context, config *api.RunTestConfig, stepID, workspace string, out io.Writer, tiConfig api.TIConfig) (string, error) { // nolint:funlen, gocyclo
 	fs := filesystem.New()
-	tmpFilePath := pipeline.SharedVolPath
+	tmpFilePath := tiConfig.TmpDir
 	log := logrus.New()
 	log.Out = out
 
 	// Get the tests that need to be run if we are running selected tests
 	var selection ti.SelectTestsResp
 
-	isManual := isManualExecution()
+	isManual := isManualExecution(tiConfig)
 	files, err := getChangedFiles(ctx, workspace, log)
 	if err != nil {
 		log.WithError(err).Println("could not get changed files")
@@ -46,7 +45,7 @@ func GetCmd(ctx context.Context, config *api.RunTestConfig, stepID, workspace st
 		log.Infoln("detected manual execution - for intelligence to be configured, a PR must be raised. Running all the tests.")
 		runOnlySelectedTests = false // run all the tests if it is a manual execution
 	}
-	selection, err = selectTests(ctx, workspace, files, runOnlySelectedTests, stepID, fs)
+	selection, err = selectTests(ctx, workspace, files, runOnlySelectedTests, stepID, fs, tiConfig)
 	if err != nil {
 		log.WithError(err).Errorln("there was some issue in trying to intelligently figure out tests to run. Running all the tests")
 		runOnlySelectedTests = false // run all the tests if an error was encountered
@@ -92,7 +91,7 @@ func GetCmd(ctx context.Context, config *api.RunTestConfig, stepID, workspace st
 	}
 
 	// Install agent artifacts if not present
-	artifactDir, err := installAgents(ctx, tmpFilePath, config.Language, runtime.GOOS, runtime.GOARCH, config.BuildTool, fs, log)
+	artifactDir, err := installAgents(ctx, tmpFilePath, config.Language, runtime.GOOS, runtime.GOARCH, config.BuildTool, fs, log, tiConfig)
 	if err != nil {
 		return "", err
 	}

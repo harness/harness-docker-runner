@@ -6,6 +6,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"runtime"
@@ -22,6 +23,7 @@ import (
 	"github.com/harness/harness-docker-runner/logger"
 	"github.com/harness/harness-docker-runner/pipeline"
 	prruntime "github.com/harness/harness-docker-runner/pipeline/runtime"
+	"github.com/harness/harness-docker-runner/ti"
 
 	"github.com/sirupsen/logrus"
 )
@@ -31,7 +33,8 @@ var random = func() string {
 	return uniuri.NewLen(20)
 }
 
-// HandleExecuteStep returns an http.HandlerFunc that executes a step
+// HandleSetup returns an http.HandlerFunc that does the initial setup
+// for executing the step
 func HandleSetup() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		st := time.Now()
@@ -46,6 +49,12 @@ func HandleSetup() http.HandlerFunc {
 
 		updateVolumes(s)
 
+		// Add ti volume where all the TI related data (CG, Agent logs, config) will be stored
+		// Add this dir to TIConfig for uploading the data
+		tiVolume := getTiVolume(s.ID)
+		s.Volumes = append(s.Volumes, tiVolume)
+		s.TIConfig.TmpDir = tiVolume.HostPath.Path
+
 		setProxyEnvs(s.Envs)
 		engine, err := engine.NewEnv(docker.Opts{})
 		if err != nil {
@@ -55,8 +64,6 @@ func HandleSetup() http.HandlerFunc {
 		}
 		stepExecutor := prruntime.NewStepExecutor(engine)
 		state := pipeline.NewState()
-		// s.LogConfig.IndirectUpload = true
-		// s.LogConfig.URL = "http://localhost:8079"
 		state.Set(s.Volumes, s.Secrets, s.LogConfig, s.TIConfig, s.SetupRequestConfig.Network.ID)
 
 		log := logrus.New()
@@ -157,6 +164,19 @@ func getSharedVolume() *spec.Volume {
 			Name: pipeline.SharedVolName,
 			Path: pipeline.SharedVolPath,
 			ID:   "engine",
+		},
+	}
+}
+
+// getTiVolume returns a volume (directory) which is used to store TI related data
+func getTiVolume(setupID string) *spec.Volume {
+	tiDir := fmt.Sprintf("%s-%s", ti.VolumePath, sanitize(setupID))
+	return &spec.Volume{
+		HostPath: &spec.VolumeHostPath{
+			Name:   ti.VolumeName,
+			Path:   tiDir,
+			Create: true,
+			Remove: true,
 		},
 	}
 }

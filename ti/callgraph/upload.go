@@ -9,10 +9,10 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
+	"time"
 
 	"github.com/harness/harness-docker-runner/api"
 	"github.com/harness/harness-docker-runner/internal/filesystem"
-	"github.com/harness/harness-docker-runner/pipeline"
 	"github.com/harness/harness-docker-runner/ti/avro"
 	"github.com/harness/harness-docker-runner/ti/client"
 	"github.com/mattn/go-zglob"
@@ -26,14 +26,11 @@ const (
 )
 
 // Upload method uploads the callgraph.
-func Upload(ctx context.Context, stepID string, timeMs int64, out io.Writer, ticlient client.Client) error {
+func Upload(ctx context.Context, stepID string, timeMs int64, out io.Writer, start time.Time, cfg api.TIConfig) error {
 	log := logrus.New()
 	log.Out = out
 
-	// TODO: Pass in the config here and use that, right now it will be empty
-	// cfg := pipeline.GetState().GetTIConfig()
-	cfg := &api.TIConfig{}
-	if cfg == nil || cfg.URL == "" {
+	if cfg.URL == "" {
 		return fmt.Errorf("TI config is not provided in setup")
 	}
 
@@ -57,12 +54,18 @@ func Upload(ctx context.Context, stepID string, timeMs int64, out io.Writer, tic
 		}
 	}
 
-	encCg, err := encodeCg(fmt.Sprintf(cgDir, pipeline.SharedVolPath), log)
+	encCg, err := encodeCg(fmt.Sprintf(cgDir, cfg.TmpDir), log)
 	if err != nil {
 		return errors.Wrap(err, "failed to get avro encoded callgraph")
 	}
 
-	return ticlient.UploadCg(ctx, stepID, source, target, timeMs, encCg)
+	c := client.NewHTTPClient(cfg.URL, cfg.Token, cfg.AccountID, cfg.OrgID, cfg.ProjectID,
+		cfg.PipelineID, cfg.BuildID, cfg.StageID, cfg.Repo, cfg.Sha, false)
+	if cgErr := c.UploadCg(ctx, stepID, source, target, timeMs, encCg); cgErr != nil {
+		return cgErr
+	}
+	log.Infoln(fmt.Sprintf("Successfully uploaded callgraph in %s time", time.Since(start)))
+	return nil
 }
 
 // encodeCg reads all files of specified format from datadir folder and returns byte array of avro encoded format

@@ -196,6 +196,8 @@ type (
 		TargetBranch string `json:"target_branch,omitempty"`
 		CommitBranch string `json:"commit_branch,omitempty"`
 		CommitLink   string `json:"commit_link,omitempty"`
+		// Local path where TI data will be stored
+		TmpDir string
 	}
 
 	TestReport struct {
