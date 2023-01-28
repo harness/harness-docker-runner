@@ -14,16 +14,20 @@ import (
 	"github.com/harness/harness-docker-runner/api"
 	"github.com/harness/harness-docker-runner/engine"
 	"github.com/harness/harness-docker-runner/pipeline"
-	"github.com/harness/harness-docker-runner/ti/callgraph"
-	"github.com/harness/harness-docker-runner/ti/instrumentation"
-	"github.com/harness/harness-docker-runner/ti/report"
+	"github.com/harness/lite-engine/ti/callgraph"
+	tiCfg "github.com/harness/lite-engine/ti/config"
+	"github.com/harness/lite-engine/ti/instrumentation"
+	"github.com/harness/lite-engine/ti/report"
 	"github.com/sirupsen/logrus"
 )
 
-func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.StartStepRequest, out io.Writer, tiConfig api.TIConfig) (
+func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.StartStepRequest, out io.Writer, tiConfig *tiCfg.Cfg) (
 	*runtime.State, map[string]string, error) {
+	log := logrus.New()
+	log.Out = out
+
 	start := time.Now()
-	cmd, err := instrumentation.GetCmd(ctx, &r.RunTest, r.Name, r.WorkingDir, out, tiConfig)
+	cmd, err := instrumentation.GetCmd(ctx, &r.RunTest, r.Name, r.WorkingDir, log, r.Envs, tiConfig)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -41,15 +45,12 @@ func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.Start
 		step.Command[0] += getOutputVarCmd(step.Entrypoint, r.OutputVars, outputFile)
 	}
 
-	log := logrus.New()
-	log.Out = out
-
 	exited, err := engine.Run(ctx, step, out)
 	if rerr := report.ParseAndUploadTests(ctx, r.TestReport, r.WorkingDir, step.Name, log, time.Now(), tiConfig); rerr != nil {
 		log.WithError(rerr).Errorln("failed to upload report")
 	}
 
-	if uerr := callgraph.Upload(ctx, step.Name, time.Since(start).Milliseconds(), out, time.Now(), tiConfig); uerr != nil {
+	if uerr := callgraph.Upload(ctx, step.Name, time.Since(start).Milliseconds(), log, time.Now(), tiConfig); uerr != nil {
 		log.WithError(uerr).Errorln("unable to collect callgraph")
 	}
 
