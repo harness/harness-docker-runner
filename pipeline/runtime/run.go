@@ -17,10 +17,11 @@ import (
 	"github.com/harness/harness-docker-runner/api"
 	"github.com/harness/harness-docker-runner/engine"
 	"github.com/harness/harness-docker-runner/pipeline"
-	"github.com/harness/harness-docker-runner/ti/report"
+	tiCfg "github.com/harness/lite-engine/ti/config"
+	"github.com/harness/lite-engine/ti/report"
 )
 
-func executeRunStep(ctx context.Context, engine *engine.Engine, r *api.StartStepRequest, out io.Writer, tiConfig api.TIConfig) (
+func executeRunStep(ctx context.Context, engine *engine.Engine, r *api.StartStepRequest, out io.Writer, tiConfig *tiCfg.Cfg) (
 	*runtime.State, map[string]string, error) {
 	step := toStep(r)
 	step.Command = r.Run.Command

@@ -24,6 +24,7 @@ import (
 	"github.com/harness/harness-docker-runner/pipeline"
 	prruntime "github.com/harness/harness-docker-runner/pipeline/runtime"
 	"github.com/harness/harness-docker-runner/ti"
+	tiCfg "github.com/harness/lite-engine/ti/config"
 
 	"github.com/sirupsen/logrus"
 )
@@ -53,7 +54,7 @@ func HandleSetup() http.HandlerFunc {
 		// Add this dir to TIConfig for uploading the data
 		tiVolume := getTiVolume(s.ID)
 		s.Volumes = append(s.Volumes, tiVolume)
-		s.TIConfig.TmpDir = tiVolume.HostPath.Path
+		tiConfig := getTiCfg(s.TIConfig, tiVolume.HostPath.Path)
 
 		setProxyEnvs(s.Envs)
 		engine, err := engine.NewEnv(docker.Opts{})
@@ -64,7 +65,7 @@ func HandleSetup() http.HandlerFunc {
 		}
 		stepExecutor := prruntime.NewStepExecutor(engine)
 		state := pipeline.NewState()
-		state.Set(s.Volumes, s.Secrets, s.LogConfig, s.TIConfig, s.SetupRequestConfig.Network.ID)
+		state.Set(s.Volumes, s.Secrets, s.LogConfig, tiConfig, s.SetupRequestConfig.Network.ID)
 
 		log := logrus.New()
 		var logr *logrus.Entry
@@ -204,4 +205,10 @@ func setProxyEnvs(environment map[string]string) {
 	for _, v := range proxyEnvs {
 		os.Setenv(v, environment[v])
 	}
+}
+
+func getTiCfg(t api.TIConfig, dataDir string) tiCfg.Cfg {
+	cfg := tiCfg.New(t.URL, t.Token, t.AccountID, t.OrgID, t.ProjectID, t.PipelineID, t.BuildID, t.StageID, t.Repo,
+		t.Sha, t.CommitLink, t.SourceBranch, t.TargetBranch, t.CommitBranch, dataDir, false)
+	return cfg
 }

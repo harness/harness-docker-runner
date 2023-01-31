@@ -17,6 +17,7 @@ import (
 	"github.com/harness/harness-docker-runner/errors"
 	"github.com/harness/harness-docker-runner/livelog"
 	"github.com/harness/harness-docker-runner/logstream"
+	tiCfg "github.com/harness/lite-engine/ti/config"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/sirupsen/logrus"
@@ -55,7 +56,7 @@ func NewStepExecutor(engine *engine.Engine) *StepExecutor {
 	}
 }
 
-func (e *StepExecutor) StartStep(ctx context.Context, r *api.StartStepRequest, secrets []string, client logstream.Client, tiConfig api.TIConfig) error {
+func (e *StepExecutor) StartStep(ctx context.Context, r *api.StartStepRequest, secrets []string, client logstream.Client, tiConfig *tiCfg.Cfg) error {
 	if r.ID == "" {
 		return &errors.BadRequestError{Msg: "ID needs to be set"}
 	}
@@ -172,7 +173,7 @@ func (e *StepExecutor) StreamOutput(ctx context.Context, r *api.StreamOutputRequ
 	return //nolint:nakedret
 }
 
-func (e *StepExecutor) executeStepDrone(r *api.StartStepRequest, tiConfig api.TIConfig) (*runtime.State, error) {
+func (e *StepExecutor) executeStepDrone(r *api.StartStepRequest, tiConfig *tiCfg.Cfg) (*runtime.State, error) {
 	ctx := context.Background()
 	var cancel context.CancelFunc
 	if r.Timeout > 0 {
@@ -227,7 +228,7 @@ func (e *StepExecutor) executeStepDrone(r *api.StartStepRequest, tiConfig api.TI
 	return runStep()
 }
 
-func (e *StepExecutor) executeStep(r *api.StartStepRequest, secrets []string, client logstream.Client, tiConfig api.TIConfig) (*runtime.State, map[string]string, error) {
+func (e *StepExecutor) executeStep(r *api.StartStepRequest, secrets []string, client logstream.Client, tiConfig *tiCfg.Cfg) (*runtime.State, map[string]string, error) {
 	if r.LogDrone {
 		state, err := e.executeStepDrone(r, tiConfig)
 		return state, nil, err
@@ -299,7 +300,7 @@ func (e *StepExecutor) executeStep(r *api.StartStepRequest, secrets []string, cl
 	return exited, outputs, result
 }
 
-func (e *StepExecutor) run(ctx context.Context, engine *engine.Engine, r *api.StartStepRequest, out io.Writer, tiConfig api.TIConfig) (
+func (e *StepExecutor) run(ctx context.Context, engine *engine.Engine, r *api.StartStepRequest, out io.Writer, tiConfig *tiCfg.Cfg) (
 	*runtime.State, map[string]string, error) {
 	if r.Kind == api.Run {
 		return executeRunStep(ctx, engine, r, out, tiConfig)

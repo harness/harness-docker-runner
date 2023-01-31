@@ -6,6 +6,7 @@ package api
 
 import (
 	"github.com/harness/harness-docker-runner/engine/spec"
+	leapi "github.com/harness/lite-engine/api"
 )
 
 type CommandExecutionStatus string
@@ -18,6 +19,13 @@ const (
 	RunningState CommandExecutionStatus = "RUNNING"
 	Queued       CommandExecutionStatus = "QUEUED"
 	Skipped      CommandExecutionStatus = "SKIPPED"
+	Junit                               = leapi.Junit
+)
+
+type (
+	RunTestConfig = leapi.RunTestConfig
+	TestReport    = leapi.TestReport
+	TIConfig      = leapi.TIConfig
 )
 
 type (
@@ -162,47 +170,11 @@ type (
 		Entrypoint []string `json:"entrypoint,omitempty"`
 	}
 
-	RunTestConfig struct {
-		Args                 string   `json:"args,omitempty"`
-		Entrypoint           []string `json:"entrypoint,omitempty"`
-		PreCommand           string   `json:"pre_command,omitempty"`
-		PostCommand          string   `json:"post_command,omitempty"`
-		BuildTool            string   `json:"build_tool,omitempty"`
-		Language             string   `json:"language,omitempty"`
-		Packages             string   `json:"packages,omitempty"`
-		RunOnlySelectedTests bool     `json:"run_only_selected_tests,omitempty"`
-		TestAnnotations      string   `json:"test_annotations,omitempty"`
-	}
-
 	LogConfig struct {
 		AccountID      string `json:"account_id,omitempty"`
 		IndirectUpload bool   `json:"indirect_upload,omitempty"` // Whether to directly upload via signed link or using log service
 		URL            string `json:"url,omitempty"`
 		Token          string `json:"token,omitempty"`
-	}
-
-	TIConfig struct {
-		URL          string `json:"url,omitempty"`
-		Token        string `json:"token,omitempty"`
-		AccountID    string `json:"account_id,omitempty"`
-		OrgID        string `json:"org_id,omitempty"`
-		ProjectID    string `json:"project_id,omitempty"`
-		PipelineID   string `json:"pipeline_id,omitempty"`
-		StageID      string `json:"stage_id,omitempty"`
-		BuildID      string `json:"build_id,omitempty"`
-		Repo         string `json:"repo,omitempty"`
-		Sha          string `json:"sha,omitempty"`
-		SourceBranch string `json:"source_branch,omitempty"`
-		TargetBranch string `json:"target_branch,omitempty"`
-		CommitBranch string `json:"commit_branch,omitempty"`
-		CommitLink   string `json:"commit_link,omitempty"`
-		// Local path where TI data will be stored
-		TmpDir string
-	}
-
-	TestReport struct {
-		Kind  ReportType  `json:"kind,omitempty"`
-		Junit JunitReport `json:"junit,omitempty"`
 	}
 
 	JunitReport struct {

@@ -10,7 +10,7 @@ import (
 	"github.com/harness/harness-docker-runner/logstream"
 	"github.com/harness/harness-docker-runner/logstream/filestore"
 	"github.com/harness/harness-docker-runner/logstream/remote"
-	"github.com/harness/harness-docker-runner/ti/client"
+	tiCfg "github.com/harness/lite-engine/ti/config"
 )
 
 const (
@@ -22,10 +22,9 @@ const (
 type State struct {
 	volumes   []*spec.Volume
 	logConfig api.LogConfig
-	tiConfig  api.TIConfig
+	tiConfig  tiCfg.Cfg
 	secrets   []string
 	logClient logstream.Client
-	tiClient  client.Client
 	network   string
 }
 
@@ -33,13 +32,13 @@ func NewState() *State {
 	return &State{
 		volumes:   make([]*spec.Volume, 0),
 		logConfig: api.LogConfig{},
-		tiConfig:  api.TIConfig{},
+		tiConfig:  tiCfg.Cfg{},
 		secrets:   make([]string, 0),
 		logClient: nil,
 	}
 }
 
-func (s *State) Set(volumes []*spec.Volume, secrets []string, logConfig api.LogConfig, tiConfig api.TIConfig, network string) { // nolint:gocritic
+func (s *State) Set(volumes []*spec.Volume, secrets []string, logConfig api.LogConfig, tiConfig tiCfg.Cfg, network string) { // nolint:gocritic
 	s.volumes = volumes
 	s.secrets = secrets
 	s.logConfig = logConfig
@@ -70,16 +69,7 @@ func (s *State) GetLogStreamClient() logstream.Client {
 	return s.logClient
 }
 
-func (s *State) GetTiClient() client.Client {
-	if s.tiClient == nil {
-		s.tiClient = client.NewHTTPClient(s.tiConfig.URL, s.tiConfig.Token, s.tiConfig.AccountID,
-			s.tiConfig.OrgID, s.tiConfig.ProjectID, s.tiConfig.PipelineID, s.tiConfig.BuildID,
-			s.tiConfig.StageID, s.tiConfig.Repo, s.tiConfig.Sha, false)
-	}
-	return s.tiClient
-}
-
-func (s *State) GetTIConfig() *api.TIConfig {
+func (s *State) GetTIConfig() *tiCfg.Cfg {
 	return &s.tiConfig
 }
 
