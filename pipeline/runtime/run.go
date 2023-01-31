@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"time"
 
 	"github.com/drone/runner-go/pipeline/runtime"
 	"github.com/sirupsen/logrus"
@@ -16,11 +17,11 @@ import (
 	"github.com/harness/harness-docker-runner/api"
 	"github.com/harness/harness-docker-runner/engine"
 	"github.com/harness/harness-docker-runner/pipeline"
-	ticlient "github.com/harness/harness-docker-runner/ti/client"
-	"github.com/harness/harness-docker-runner/ti/report"
+	tiCfg "github.com/harness/lite-engine/ti/config"
+	"github.com/harness/lite-engine/ti/report"
 )
 
-func executeRunStep(ctx context.Context, engine *engine.Engine, r *api.StartStepRequest, out io.Writer, ticlient ticlient.Client) (
+func executeRunStep(ctx context.Context, engine *engine.Engine, r *api.StartStepRequest, out io.Writer, tiConfig *tiCfg.Cfg) (
 	*runtime.State, map[string]string, error) {
 	step := toStep(r)
 	step.Command = r.Run.Command
@@ -43,7 +44,7 @@ func executeRunStep(ctx context.Context, engine *engine.Engine, r *api.StartStep
 
 	exited, err := engine.Run(ctx, step, out)
 	logrus.WithField("step_id", r.ID).WithField("stage_id", r.StageRuntimeID).Traceln("completed step run")
-	if rerr := report.ParseAndUploadTests(ctx, r.TestReport, r.WorkingDir, step.Name, log, ticlient); rerr != nil {
+	if rerr := report.ParseAndUploadTests(ctx, r.TestReport, r.WorkingDir, step.Name, log, time.Now(), tiConfig); rerr != nil {
 		logrus.WithError(rerr).WithField("step", step.Name).Errorln("failed to upload report")
 	}
 
