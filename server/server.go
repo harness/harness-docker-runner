@@ -31,8 +31,8 @@ type Server struct {
 
 // Start initializes a server to respond to HTTPS/TLS network requests.
 func (s *Server) Start(ctx context.Context) error {
-	// Uncomment the following line for local run
-	// s.Insecure = true
+	// The default run mode is insecure, as most clients will run the delegate and
+	// the docker runner on a same host.
 
 	logrus.Infof("Runner version: %s", version.Version)
 
@@ -65,9 +65,8 @@ func (s *Server) Start(ctx context.Context) error {
 
 	var g errgroup.Group
 	g.Go(func() error {
-		// Uncomment the following line for local run
-		// s.Insecure = true
-
+		// The default run mode is insecure, as most clients will run the delegate and
+		// the docker runner on a same host.
 		if s.Insecure {
 			return srv.ListenAndServe()
 		}
