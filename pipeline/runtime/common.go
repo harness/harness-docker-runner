@@ -30,14 +30,19 @@ func getNudges() []logstream.Nudge {
 
 func getOutputVarCmd(entrypoint, outputVars []string, outputFile string) string {
 	isPsh := isPowershell(entrypoint)
+	isPython := isPython(entrypoint)
 
 	cmd := ""
 	if isPsh {
 		cmd += fmt.Sprintf("\nNew-Item %s", outputFile)
+	} else if isPython {
+		cmd += "\nimport os\n"
 	}
 	for _, o := range outputVars {
 		if isPsh {
 			cmd += fmt.Sprintf("\n$val = \"%s $Env:%s\" \nAdd-Content -Path %s -Value $val", o, o, outputFile)
+		} else if isPython {
+			cmd += fmt.Sprintf("with open('%s', 'a') as out_file:\n\tout_file.write('%s ' + os.getenv('%s') + '\\n')\n", outputFile, o, o)
 		} else {
 			cmd += fmt.Sprintf(";echo \"%s $%s\" >> %s", o, o, outputFile)
 		}
@@ -48,6 +53,13 @@ func getOutputVarCmd(entrypoint, outputVars []string, outputFile string) string 
 
 func isPowershell(entrypoint []string) bool {
 	if len(entrypoint) > 0 && (entrypoint[0] == "powershell" || entrypoint[0] == "pwsh") {
+		return true
+	}
+	return false
+}
+
+func isPython(entrypoint []string) bool {
+	if len(entrypoint) > 0 && (entrypoint[0] == "python3") {
 		return true
 	}
 	return false
