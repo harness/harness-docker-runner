@@ -30,11 +30,26 @@ type Config struct {
 		CaCertFile string `envconfig:"CA_CERT_FILE" default:"/tmp/certs/ca-cert.pem"`         // CA certificate file
 		Insecure   bool   `envconfig:"CLIENT_INSECURE" default:"true"`                        // don't check server certificate
 	}
+
+	DelegateCapacity struct {
+		ManagerEndpoint string `envconfig:"MANAGER_ENDPOINT" default:"http://localhost:3457"`
+		Secret          string `envconfig:"DELEGATE_SECRET" default:"2f6b0988b6fb3370073c3d0505baee59"`
+		AccountID       string `envconfig:"ACCOUNT_ID" default:"kmpySmUISimoRrJL6NL73w"`
+		MaxBuilds       int    `envconfig:"DELEGATE_CAPACITY" default:"1"`
+	}
 }
 
 // Load loads the configuration from the environment.
 func Load() (Config, error) {
 	cfg := Config{}
 	err := envconfig.Process("", &cfg)
+	conf = &cfg
 	return cfg, err
 }
+
+// Load loads the configuration from the environment.
+func GetConfig() *Config {
+	return conf
+}
+
+var conf *Config
