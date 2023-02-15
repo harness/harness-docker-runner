@@ -74,7 +74,6 @@ func (c *HTTPClient) Destroy(ctx context.Context, in *api.DestroyRequest) (*api.
 	path := "destroy"
 	out := new(api.DestroyResponse)
 	_, err := c.do(ctx, c.Endpoint+path, http.MethodPost, in, out) // nolint:bodyclose
-
 	return out, err
 }
 
