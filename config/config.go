@@ -35,7 +35,7 @@ type Config struct {
 		ManagerEndpoint string `envconfig:"MANAGER_ENDPOINT" default:"http://localhost:3457"`
 		Secret          string `envconfig:"DELEGATE_SECRET" default:"2f6b0988b6fb3370073c3d0505baee59"`
 		AccountID       string `envconfig:"ACCOUNT_ID" default:"kmpySmUISimoRrJL6NL73w"`
-		MaxBuilds       int    `envconfig:"DELEGATE_CAPACITY" default:"1"`
+		MaxBuilds       int    `envconfig:"DELEGATE_CAPACITY" default:"1000"`
 	}
 }
 

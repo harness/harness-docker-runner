@@ -81,7 +81,7 @@ func (c *HTTPClient) StartStep(ctx context.Context, in *api.StartStepRequest) (*
 	path := "step"
 	out := new(api.StartStepResponse)
 	_, err := c.do(ctx, c.Endpoint+path, http.MethodPost, in, out) // nolint:bodyclose
-	util.RegisterDelagetCapacity(out.DelegateMetaInfo.ID)
+	util.RegisterDelegateCapacity(out.DelegateMetaInfo.ID)
 	return out, err
 }
 
