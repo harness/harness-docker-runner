@@ -7,12 +7,14 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
 
+	"github.com/harness/harness-docker-runner/config"
 	"github.com/harness/harness-docker-runner/executor"
 	"github.com/harness/harness-docker-runner/pipeline"
 
@@ -24,7 +26,7 @@ import (
 )
 
 // HandleExecuteStep returns an http.HandlerFunc that executes a step
-func HandleStartStep() http.HandlerFunc {
+func HandleStartStep(config *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		st := time.Now()
 
@@ -46,6 +48,7 @@ func HandleStartStep() http.HandlerFunc {
 			return
 		}
 		s.Volumes = append(s.Volumes, getSharedVolumeMount())
+		s.Volumes = append(s.Volumes, getGlobalVolumesMount(config)...)
 
 		stageData.State.AppendSecrets(s.Secrets)
 
@@ -108,6 +111,31 @@ func getSharedVolumeMount() *spec.VolumeMount {
 		Name: pipeline.SharedVolName,
 		Path: pipeline.SharedVolPath,
 	}
+}
+
+func getGlobalVolumesMount(config *config.Config) []*spec.VolumeMount {
+	var volumes []*spec.VolumeMount
+	runnerVolumes := config.Runner.Volumes
+	for _, runnerVolume := range runnerVolumes {
+		volume, err := parseVolumeMount(runnerVolume)
+		if err != nil {
+			panic(err)
+		}
+		volumes = append(volumes, volume)
+	}
+	return volumes
+}
+
+func parseVolumeMount(runnerVolume string) (volume *spec.VolumeMount, err error) {
+	z := strings.SplitN(runnerVolume, ":", 2)
+	if len(z) != 2 {
+		return volume, fmt.Errorf("volume %s is not in the format src:dest", runnerVolume)
+	}
+
+	return &spec.VolumeMount{
+		Name: z[0],
+		Path: z[1],
+	}, nil
 }
 
 // this returns back the host volume which is being used to clone repositories

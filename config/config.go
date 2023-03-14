@@ -14,6 +14,10 @@ type Config struct {
 	Trace      bool   `envconfig:"DRONE_TRACE"`
 	ServerName string `envconfig:"SERVER_NAME" default:"drone"`
 
+	Runner struct {
+		Volumes []string `envconfig:"CI_MOUNT_VOLUMES"`
+	}
+
 	Server struct {
 		Bind              string `envconfig:"HTTPS_BIND" default:":3000"`
 		CertFile          string `envconfig:"SERVER_CERT_FILE" default:"/tmp/certs/server-cert.pem"` // Server certificate PEM file
