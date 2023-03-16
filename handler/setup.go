@@ -15,6 +15,7 @@ import (
 
 	"github.com/dchest/uniuri"
 	"github.com/harness/harness-docker-runner/api"
+	"github.com/harness/harness-docker-runner/config"
 	"github.com/harness/harness-docker-runner/engine"
 	"github.com/harness/harness-docker-runner/engine/docker"
 	"github.com/harness/harness-docker-runner/engine/spec"
@@ -36,7 +37,7 @@ var random = func() string {
 
 // HandleSetup returns an http.HandlerFunc that does the initial setup
 // for executing the step
-func HandleSetup() http.HandlerFunc {
+func HandleSetup(config *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		st := time.Now()
 
@@ -95,6 +96,7 @@ func HandleSetup() http.HandlerFunc {
 
 		// fmt.Printf("setup request config: %+v\n", s.SetupRequestConfig)
 		s.Volumes = append(s.Volumes, getSharedVolume())
+		s.Volumes = append(s.Volumes, getGlobalVolumes(config)...)
 
 		cfg := &spec.PipelineConfig{
 			Envs:    s.Envs,
@@ -198,6 +200,34 @@ func getDockerSockVolume() *spec.Volume {
 			ID:   "docker",
 		},
 	}
+}
+
+func getGlobalVolumes(config *config.Config) []*spec.Volume {
+	var volumes []*spec.Volume
+	runnerVolumes := config.Runner.Volumes
+	for _, runnerVolume := range runnerVolumes {
+		volume, err := parseVolume(runnerVolume)
+		if err != nil {
+			panic(err)
+		}
+		volumes = append(volumes, volume)
+	}
+	return volumes
+}
+
+func parseVolume(runnerVolume string) (volume *spec.Volume, err error) {
+
+	z := strings.SplitN(runnerVolume, ":", 2)
+	if len(z) != 2 {
+		return volume, fmt.Errorf("volume %s is not in the format src:dest", runnerVolume)
+	}
+	return &spec.Volume{
+		HostPath: &spec.VolumeHostPath{
+			Name: z[0],
+			Path: z[0],
+			ID:   random(),
+		},
+	}, nil
 }
 
 func setProxyEnvs(environment map[string]string) {

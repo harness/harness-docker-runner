@@ -24,7 +24,7 @@ func Handler(config *config.Config, engine *engine.Engine, stepExecutor *runtime
 	// Setup stage endpoint
 	r.Mount("/setup", func() http.Handler {
 		sr := chi.NewRouter()
-		sr.Post("/", HandleSetup())
+		sr.Post("/", HandleSetup(config))
 		return sr
 	}())
 
@@ -38,7 +38,7 @@ func Handler(config *config.Config, engine *engine.Engine, stepExecutor *runtime
 	// Start step endpoint
 	r.Mount("/step", func() http.Handler {
 		sr := chi.NewRouter()
-		sr.Post("/", HandleStartStep())
+		sr.Post("/", HandleStartStep(config))
 		return sr
 	}())
 
