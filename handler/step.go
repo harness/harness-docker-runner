@@ -127,7 +127,7 @@ func getGlobalVolumesMount(config *config.Config) []*spec.VolumeMount {
 }
 
 func parseVolumeMount(runnerVolume string) (volume *spec.VolumeMount, err error) {
-	z := strings.SplitN(runnerVolume, ":", 2)
+	z := strings.SplitN(runnerVolume, ";", 2)
 	if len(z) != 2 {
 		return volume, fmt.Errorf("volume %s is not in the format src:dest", runnerVolume)
 	}
