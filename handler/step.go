@@ -17,6 +17,7 @@ import (
 	"github.com/harness/harness-docker-runner/config"
 	"github.com/harness/harness-docker-runner/executor"
 	"github.com/harness/harness-docker-runner/pipeline"
+	"github.com/harness/harness-docker-runner/util"
 
 	"github.com/harness/harness-docker-runner/api"
 	"github.com/harness/harness-docker-runner/engine"
@@ -66,7 +67,7 @@ func HandleStartStep(config *config.Config) http.HandlerFunc {
 				v.Path = hv.HostPath.Path
 			}
 		}
-
+		updateDelegateCapacity(&s.StartStepRequestConfig)
 		updateGitCloneConfig(&s.StartStepRequestConfig)
 
 		// fmt.Printf("start step request config: %+v\n", s.StartStepRequestConfig)
@@ -193,6 +194,14 @@ func updateGitCloneConfig(s *api.StartStepRequestConfig) {
 				s.Envs["DRONE_WORKSPACE"] = filepath.Join(s.WorkingDir, ws)
 			}
 		}
+	}
+}
+
+// TODO: Move this logic to Java so that we pass in the right arguments to the runner
+func updateDelegateCapacity(s *api.StartStepRequestConfig) {
+	if ws, ok := s.Envs["HARNESS_DELEGATE_ID"]; ok {
+		fmt.Println("hjbbhhhjbbhj")
+		util.RegisterDelegateCapacity(ws)
 	}
 }
 

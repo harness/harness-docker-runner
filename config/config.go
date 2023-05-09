@@ -36,14 +36,14 @@ type Config struct {
 	}
 
 	DelegateCapacity struct {
-		ManagerEndpoint string `envconfig:"MANAGER_ENDPOINT"`
-		Secret          string `envconfig:"DELEGATE_SECRET"`
-		AccountID       string `envconfig:"ACCOUNT_ID"`
-		MaxBuilds       int    `envconfig:"DELEGATE_CAPACITY"`
+		ManagerEndpoint string `envconfig:"MANAGER_ENDPOINT" default:"https://qa.harness.io"`
+		Secret          string `envconfig:"DELEGATE_SECRET" default:"4718645a980c0423da04d0b172d9a368"`
+		AccountID       string `envconfig:"ACCOUNT_ID" default:"q4R8_wCOSlOWfN2NRhtqgw"`
+		MaxBuilds       int    `envconfig:"DELEGATE_CAPACITY" default:"1"`
 	}
 }
 
-// Load loads the configuration from the environment.
+// Load loads the configuration from the environment.s	x
 func Load() (Config, error) {
 	cfg := Config{}
 	err := envconfig.Process("", &cfg)
