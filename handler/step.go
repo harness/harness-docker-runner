@@ -197,7 +197,6 @@ func updateGitCloneConfig(s *api.StartStepRequestConfig) {
 	}
 }
 
-// TODO: Move this logic to Java so that we pass in the right arguments to the runner
 func updateDelegateCapacity(s *api.StartStepRequestConfig) {
 	if ws, ok := s.Envs["HARNESS_DELEGATE_ID"]; ok {
 		util.RegisterDelegateCapacity(ws)
