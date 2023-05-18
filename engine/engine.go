@@ -55,6 +55,10 @@ func (e *Engine) Setup(ctx context.Context, pipelineConfig *spec.PipelineConfig)
 			path := vol.HostPath.Path
 			vol.HostPath.Path = pathConverter(path)
 
+			if vol.HostPath.ContainerPath != "" {
+				vol.HostPath.ContainerPath = pathConverter(vol.HostPath.ContainerPath)
+			}
+
 			if _, err := os.Stat(path); err == nil {
 				continue
 			}
