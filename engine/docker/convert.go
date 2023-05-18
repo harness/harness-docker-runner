@@ -206,7 +206,13 @@ func toVolumeSlice(pipelineConfig *spec.PipelineConfig, step *spec.Step) []strin
 			to = append(to, path)
 		}
 		if isBindMount(volume) {
-			path := volume.HostPath.Path + ":" + mount.Path
+			containerPath := mount.Path
+
+			if mount.ContainerPath != "" {
+				containerPath = mount.ContainerPath
+			}
+
+			path := volume.HostPath.Path + ":" + containerPath
 			to = append(to, path)
 		}
 	}

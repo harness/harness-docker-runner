@@ -64,10 +64,11 @@ func HandleStartStep(config *config.Config) http.HandlerFunc {
 			if v.Name == "harness" {
 				v.Name = hv.HostPath.Name
 				v.Path = hv.HostPath.Path
+				v.ContainerPath = hv.HostPath.ContainerPath
 			}
 		}
 
-		updateGitCloneConfig(&s.StartStepRequestConfig)
+		updateGitCloneConfig(&s.StartStepRequestConfig, hv)
 
 		// fmt.Printf("start step request config: %+v\n", s.StartStepRequestConfig)
 
@@ -175,8 +176,10 @@ func HandlePollStep(e *pruntime.StepExecutor) http.HandlerFunc {
 }
 
 // TODO: Move this logic to Java so that we pass in the right arguments to the runner
-func updateGitCloneConfig(s *api.StartStepRequestConfig) {
+func updateGitCloneConfig(s *api.StartStepRequestConfig, hv *spec.Volume) {
 	if strings.Contains(s.Image, "harness/drone-git") {
+		// Always use bind mounted path as the working directory
+		s.WorkingDir = hv.HostPath.ContainerPath
 		if ws, ok := s.Envs["DRONE_WORKSPACE"]; ok {
 			// If it's an explicit git clone step, make sure the workspace is namespaced
 			if strings.HasPrefix(ws, "/harness") || strings.HasPrefix(ws, "/tmp/harness") {

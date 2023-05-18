@@ -155,6 +155,7 @@ func updateVolumes(r api.SetupRequest) {
 			if v.HostPath.ID == "harness" {
 				v.HostPath.Create = true
 				v.HostPath.Remove = true
+				v.HostPath.ContainerPath = "/harness"
 				v.HostPath.Path = v.HostPath.Path + "-" + sanitize(r.ID)
 			}
 		}
