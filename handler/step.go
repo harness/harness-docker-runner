@@ -17,6 +17,7 @@ import (
 	"github.com/harness/harness-docker-runner/config"
 	"github.com/harness/harness-docker-runner/executor"
 	"github.com/harness/harness-docker-runner/pipeline"
+	"github.com/harness/harness-docker-runner/util"
 
 	"github.com/harness/harness-docker-runner/api"
 	"github.com/harness/harness-docker-runner/engine"
@@ -68,6 +69,7 @@ func HandleStartStep(config *config.Config) http.HandlerFunc {
 			}
 		}
 
+		updateDelegateCapacity(&s.StartStepRequestConfig)
 		updateGitCloneConfig(&s.StartStepRequestConfig, hv)
 
 		// fmt.Printf("start step request config: %+v\n", s.StartStepRequestConfig)
@@ -196,6 +198,12 @@ func updateGitCloneConfig(s *api.StartStepRequestConfig, hv *spec.Volume) {
 				s.Envs["DRONE_WORKSPACE"] = filepath.Join(s.WorkingDir, ws)
 			}
 		}
+	}
+}
+
+func updateDelegateCapacity(s *api.StartStepRequestConfig) {
+	if ws, ok := s.Envs["HARNESS_DELEGATE_ID"]; ok {
+		util.RegisterDelegateCapacity(ws)
 	}
 }
 
