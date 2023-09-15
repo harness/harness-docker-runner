@@ -11,6 +11,11 @@ steps:
       - GOOS=darwin  GOARCH=amd64   go build -ldflags "-X main.version=${DRONE_TAG##v}" -o release/drone-docker-runner-darwin-amd64
       - GOOS=darwin  GOARCH=arm64   go build -ldflags "-X main.version=${DRONE_TAG##v}" -o release/drone-docker-runner-darwin-arm64
       - GOOS=windows GOARCH=amd64   go build -ldflags "-X main.version=${DRONE_TAG##v}" -o release/drone-docker-runner-windows-amd64.exe
+      - GOOS=linux   GOARCH=amd64   go build -ldflags "-X main.version=${DRONE_TAG##v}" -o release/harness-docker-runner-linux-amd64
+      - GOOS=linux   GOARCH=arm64   go build -ldflags "-X main.version=${DRONE_TAG##v}" -o release/harness-docker-runner-linux-arm64
+      - GOOS=darwin  GOARCH=amd64   go build -ldflags "-X main.version=${DRONE_TAG##v}" -o release/harness-docker-runner-darwin-amd64
+      - GOOS=darwin  GOARCH=arm64   go build -ldflags "-X main.version=${DRONE_TAG##v}" -o release/harness-docker-runner-darwin-arm64
+      - GOOS=windows GOARCH=amd64   go build -ldflags "-X main.version=${DRONE_TAG##v}" -o release/harness-docker-runner-windows-amd64.exe
 
   - name: release
     image: plugins/github-release
@@ -21,6 +26,11 @@ steps:
         - release/drone-docker-runner-darwin-amd64
         - release/drone-docker-runner-darwin-arm64
         - release/drone-docker-runner-windows-amd64.exe
+        - release/harness-docker-runner-linux-amd64
+        - release/harness-docker-runner-linux-arm64
+        - release/harness-docker-runner-darwin-amd64
+        - release/harness-docker-runner-darwin-arm64
+        - release/harness-docker-runner-windows-amd64.exe
       api_key:
         from_secret: github_token
 trigger:
