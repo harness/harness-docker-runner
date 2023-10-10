@@ -106,6 +106,11 @@ func (e *Docker) Setup(ctx context.Context, pipelineConfig *spec.PipelineConfig)
 	if pipelineConfig.Platform.OS == "windows" {
 		driver = "nat"
 	}
+
+	if pipelineConfig.NetworkPlugin != "" {
+		driver = pipelineConfig.NetworkPlugin
+	}
+
 	_, err := e.client.NetworkCreate(ctx, pipelineConfig.Network.ID, types.NetworkCreate{
 		Driver:  driver,
 		Options: pipelineConfig.Network.Options,

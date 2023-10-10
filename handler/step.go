@@ -67,7 +67,9 @@ func HandleStartStep(config *config.Config) http.HandlerFunc {
 				v.Path = hv.HostPath.Path
 			}
 		}
-		updateDelegateCapacity(&s.StartStepRequestConfig)
+		if config.DelegateCapacity.Secret != "" {
+			updateDelegateCapacity(&s.StartStepRequestConfig)
+		}
 		updateGitCloneConfig(&s.StartStepRequestConfig)
 
 		// fmt.Printf("start step request config: %+v\n", s.StartStepRequestConfig)
