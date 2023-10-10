@@ -101,7 +101,7 @@ func HandleSetup(config *config.Config) http.HandlerFunc {
 		cfg := &spec.PipelineConfig{
 			Envs:          s.Envs,
 			Network:       s.Network,
-			NetworkPlugin: config.Runner.NetworkPlugin,
+			NetworkDriver: config.Runner.NetworkDriver,
 			Platform: spec.Platform{
 				OS:   runtime.GOOS,
 				Arch: runtime.GOARCH,

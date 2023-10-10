@@ -16,7 +16,7 @@ type (
 		Platform          Platform          `json:"platform,omitempty"`
 		Volumes           []*Volume         `json:"volumes,omitempty"`
 		Network           Network           `json:"network"`
-		NetworkPlugin     string            `json:"network_plugin"`
+		NetworkDriver     string            `json:"network_driver"`
 		Envs              map[string]string `json:"envs,omitempty"`
 		Files             []*File           `json:"files,omitempty"`
 		EnableDockerSetup *bool             `json:"mount_docker_socket"`

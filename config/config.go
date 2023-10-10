@@ -16,7 +16,7 @@ type Config struct {
 
 	Runner struct {
 		Volumes       []string `envconfig:"CI_MOUNT_VOLUMES"`
-		NetworkPlugin string   `envconfig:"NETWORK_PLUGIN"`
+		NetworkDriver string   `envconfig:"NETWORK_DRIVER"`
 	}
 
 	Server struct {
