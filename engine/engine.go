@@ -184,7 +184,7 @@ func toWindowsDrive(s string) string {
 	if len(s) >= 2 && (s[0] >= 'a' && s[0] <= 'z' || s[0] >= 'A' && s[0] <= 'Z') && s[1] == ':' {
 		return toWindowsPath(s)
 	}
-	return "c:" + toWindowsPath(s)
+	return "C:" + toWindowsPath(s)
 }
 
 // helper function converts the path to a valid windows

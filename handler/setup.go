@@ -99,8 +99,9 @@ func HandleSetup(config *config.Config) http.HandlerFunc {
 		s.Volumes = append(s.Volumes, getGlobalVolumes(config)...)
 
 		cfg := &spec.PipelineConfig{
-			Envs:    s.Envs,
-			Network: s.Network,
+			Envs:          s.Envs,
+			Network:       s.Network,
+			NetworkDriver: config.Runner.NetworkDriver,
 			Platform: spec.Platform{
 				OS:   runtime.GOOS,
 				Arch: runtime.GOARCH,

@@ -15,7 +15,8 @@ type Config struct {
 	ServerName string `envconfig:"SERVER_NAME" default:"drone"`
 
 	Runner struct {
-		Volumes []string `envconfig:"CI_MOUNT_VOLUMES"`
+		Volumes       []string `envconfig:"CI_MOUNT_VOLUMES"`
+		NetworkDriver string   `envconfig:"NETWORK_DRIVER"`
 	}
 
 	Server struct {
