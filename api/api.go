@@ -158,6 +158,7 @@ type (
 		Error     string            `json:"error,omitempty"`
 		OOMKilled bool              `json:"oom_killed,omitempty"`
 		Outputs   map[string]string `json:"outputs,omitempty"`
+		Artifact  []byte            `json:"artifact,omitempty"`
 	}
 
 	StreamOutputRequest struct {

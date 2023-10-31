@@ -22,14 +22,14 @@ import (
 )
 
 func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.StartStepRequest, out io.Writer, tiConfig *tiCfg.Cfg) (
-	*runtime.State, map[string]string, error) {
+	*runtime.State, map[string]string, []byte, error) {
 	log := logrus.New()
 	log.Out = out
 
 	start := time.Now()
 	cmd, err := instrumentation.GetCmd(ctx, &r.RunTest, r.Name, r.WorkingDir, log, r.Envs, tiConfig)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	step := toStep(r)
@@ -37,13 +37,16 @@ func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.Start
 	step.Entrypoint = r.RunTest.Entrypoint
 
 	if len(r.OutputVars) > 0 && len(step.Entrypoint) == 0 || len(step.Command) == 0 {
-		return nil, nil, fmt.Errorf("output variable should not be set for unset entrypoint or command")
+		return nil, nil, nil, fmt.Errorf("output variable should not be set for unset entrypoint or command")
 	}
 
 	outputFile := fmt.Sprintf("%s/%s.out", pipeline.SharedVolPath, step.ID)
 	if len(r.OutputVars) > 0 {
 		step.Command[0] += getOutputVarCmd(step.Entrypoint, r.OutputVars, outputFile)
 	}
+
+	artifactFile := fmt.Sprintf("%s/%s-artifact", pipeline.SharedVolPath, step.ID)
+	step.Envs["PLUGIN_ARTIFACT_FILE"] = artifactFile
 
 	exited, err := engine.Run(ctx, step, out)
 	if rerr := report.ParseAndUploadTests(ctx, r.TestReport, r.WorkingDir, step.Name, log, time.Now(), tiConfig); rerr != nil {
@@ -54,15 +57,16 @@ func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.Start
 		log.WithError(uerr).Errorln("unable to collect callgraph")
 	}
 
+	artifact, _ := fetchArtifactDataFromArtifactFile(artifactFile, out)
 	if len(r.OutputVars) > 0 {
 		if exited != nil && exited.Exited && exited.ExitCode == 0 {
 			outputs, err := fetchOutputVariables(outputFile, out) // nolint:govet
 			if err != nil {
-				return exited, nil, err
+				return exited, nil, nil, err
 			}
-			return exited, outputs, err
+			return exited, outputs, artifact, err
 		}
 	}
 
-	return exited, nil, err
+	return exited, nil, artifact, err
 }

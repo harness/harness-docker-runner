@@ -51,6 +51,22 @@ func getOutputVarCmd(entrypoint, outputVars []string, outputFile string) string 
 	return cmd
 }
 
+func fetchArtifactDataFromArtifactFile(artifactFile string, out io.Writer) ([]byte, error) {
+	log := logrus.New()
+	log.Out = out
+
+	if _, err := os.Stat(artifactFile); errors.Is(err, os.ErrNotExist) {
+		return nil, err
+	}
+
+	content, err := os.ReadFile(artifactFile)
+	if err != nil {
+		log.WithError(err).WithField("artifactFile", artifactFile).WithField("content", string(content)).Warnln("failed to read artifact file")
+		return nil, err
+	}
+	return content, nil
+}
+
 func isPowershell(entrypoint []string) bool {
 	if len(entrypoint) > 0 && (entrypoint[0] == "powershell" || entrypoint[0] == "pwsh") {
 		return true
