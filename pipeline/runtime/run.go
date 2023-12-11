@@ -32,6 +32,7 @@ func executeRunStep(ctx context.Context, engine *engine.Engine, r *api.StartStep
 	}
 
 	outputFile := fmt.Sprintf("%s/%s.out", pipeline.SharedVolPath, step.ID)
+	step.Envs["DRONE_OUTPUT"] = outputFile
 
 	if len(r.OutputVars) > 0 {
 		step.Command[0] += getOutputVarCmd(step.Entrypoint, r.OutputVars, outputFile)
@@ -52,18 +53,16 @@ func executeRunStep(ctx context.Context, engine *engine.Engine, r *api.StartStep
 	}
 
 	artifact, _ := fetchArtifactDataFromArtifactFile(artifactFile, out)
-	if len(r.OutputVars) > 0 {
-		if exited != nil && exited.Exited && exited.ExitCode == 0 {
-			outputs, err := fetchOutputVariables(outputFile, out) // nolint:govet
-			if err != nil {
-				return exited, nil, nil, err
-			}
-			// Delete output variable file
-			if ferr := os.Remove(outputFile); ferr != nil {
-				logrus.WithError(ferr).WithField("file", outputFile).Warnln("could not remove output file")
-			}
-			return exited, outputs, artifact, err
+	if exited != nil && exited.Exited && exited.ExitCode == 0 {
+		outputs, err := fetchOutputVariables(outputFile, out) // nolint:govet
+		if err != nil {
+			return exited, nil, nil, err
 		}
+		// Delete output variable file
+		if ferr := os.Remove(outputFile); ferr != nil {
+			logrus.WithError(ferr).WithField("file", outputFile).Warnln("could not remove output file")
+		}
+		return exited, outputs, artifact, err
 	}
 
 	return exited, nil, artifact, err

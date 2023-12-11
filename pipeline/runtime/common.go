@@ -88,6 +88,12 @@ func fetchOutputVariables(outputFile string, out io.Writer) (map[string]string, 
 	log.Out = out
 
 	outputs := make(map[string]string)
+
+	// The output file maybe not exist - we don't consider that an error
+	if _, err := os.Stat(outputFile); os.IsNotExist(err) {
+		return outputs, nil
+	}
+
 	f, err := os.Open(outputFile)
 	if err != nil {
 		log.WithError(err).WithField("outputFile", outputFile).Errorln("failed to open output file")
