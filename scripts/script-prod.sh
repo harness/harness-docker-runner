@@ -30,10 +30,10 @@ if [ "$ostype" = "Darwin" ]; then
       -e DELEGATE_TYPE="DOCKER" \
       -e ACCOUNT_ID=$ACCOUNT_ID \
       -e DELEGATE_TOKEN=$DELEGATE_TOKEN \
-      -e LOG_STREAMING_SERVICE_URL=https://app.harness.io/gratis/log-service/ \
+      -e LOG_STREAMING_SERVICE_URL=https://app.harness.io/log-service/ \
       -e DELEGATE_TAGS="macos-$archtype" \
       -e RUNNER_URL=http://host.docker.internal:3000 \
-      -e MANAGER_HOST_AND_PORT=https://app.harness.io/gratis harness/delegate:$DELEGATE_IMAGE_VERSION
+      -e MANAGER_HOST_AND_PORT=https://app.harness.io harness/delegate:$DELEGATE_IMAGE_VERSION
 
     # Wait for a while before continuing the script execution
     echo "Sleeping for 2 seconds"
@@ -64,9 +64,9 @@ elif [ "$ostype" = "Linux" ]; then
       -e DELEGATE_TYPE="DOCKER" \
       -e ACCOUNT_ID=$ACCOUNT_ID \
       -e DELEGATE_TOKEN=$DELEGATE_TOKEN \
-      -e LOG_STREAMING_SERVICE_URL=https://app.harness.io/gratis/log-service/ \
+      -e LOG_STREAMING_SERVICE_URL=https://app.harness.io/log-service/ \
       -e DELEGATE_TAGS="linux-$archtype" \
-      -e MANAGER_HOST_AND_PORT=https://app.harness.io/gratis harness/delegate:$DELEGATE_IMAGE_VERSION
+      -e MANAGER_HOST_AND_PORT=https://app.harness.io harness/delegate:$DELEGATE_IMAGE_VERSION
 
     # Wait for a while before continuing the script execution
     echo "Sleeping for 2 seconds"
@@ -101,15 +101,15 @@ else
           Paste the below command in either a linux or mac machine
           Replace the IP of the windows machine
         "
-    command="docker run -d --cpus=1 --memory=2g --restart=always\
+    command="docker run -d --cpus=1 --memory=2g --restart=always \
   -e DELEGATE_NAME=docker-delegate \
   -e NEXT_GEN="true" \
   -e DELEGATE_TYPE="DOCKER" \
   -e ACCOUNT_ID=$ACCOUNT_ID \
   -e DELEGATE_TOKEN=$DELEGATE_TOKEN \
-  -e LOG_STREAMING_SERVICE_URL=https://app.harness.io/gratis/log-service/ \
+  -e LOG_STREAMING_SERVICE_URL=https://app.harness.io/log-service/ \
   -e DELEGATE_TAGS="windows-$archtype" \
   -e RUNNER_URL=http://WINDOWS_MACHINE_HOSTNAME_OR_IP:3000 \
-  -e MANAGER_HOST_AND_PORT=https://app.harness.io/gratis harness/delegate:$DELEGATE_IMAGE_VERSION"
+  -e MANAGER_HOST_AND_PORT=https://app.harness.io harness/delegate:$DELEGATE_IMAGE_VERSION"
     echo $command
 fi

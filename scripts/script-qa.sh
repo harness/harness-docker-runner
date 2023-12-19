@@ -30,10 +30,10 @@ if [ "$ostype" = "Darwin" ]; then
       -e DELEGATE_TYPE="DOCKER" \
       -e ACCOUNT_ID=$ACCOUNT_ID \
       -e DELEGATE_TOKEN=$DELEGATE_TOKEN \
-      -e LOG_STREAMING_SERVICE_URL=https://app.harness.io/gratis/log-service/ \
+      -e LOG_STREAMING_SERVICE_URL=https://qa.harness.io/log-service/ \
       -e DELEGATE_TAGS="macos-$archtype" \
       -e RUNNER_URL=http://host.docker.internal:3000 \
-      -e MANAGER_HOST_AND_PORT=https://app.harness.io/gratis harness/delegate:$DELEGATE_IMAGE_VERSION
+      -e MANAGER_HOST_AND_PORT=https://qa.harness.io harness/delegate:$DELEGATE_IMAGE_VERSION
 
     # Wait for a while before continuing the script execution
     echo "Sleeping for 2 seconds"
@@ -64,9 +64,9 @@ elif [ "$ostype" = "Linux" ]; then
       -e DELEGATE_TYPE="DOCKER" \
       -e ACCOUNT_ID=$ACCOUNT_ID \
       -e DELEGATE_TOKEN=$DELEGATE_TOKEN \
-      -e LOG_STREAMING_SERVICE_URL=https://app.harness.io/gratis/log-service/ \
+      -e LOG_STREAMING_SERVICE_URL=https://qa.harness.io/log-service/ \
       -e DELEGATE_TAGS="linux-$archtype" \
-      -e MANAGER_HOST_AND_PORT=https://app.harness.io/gratis harness/delegate:$DELEGATE_IMAGE_VERSION
+      -e MANAGER_HOST_AND_PORT=https://qa.harness.io harness/delegate:$DELEGATE_IMAGE_VERSION
 
     # Wait for a while before continuing the script execution
     echo "Sleeping for 2 seconds"
@@ -107,9 +107,9 @@ else
   -e DELEGATE_TYPE="DOCKER" \
   -e ACCOUNT_ID=$ACCOUNT_ID \
   -e DELEGATE_TOKEN=$DELEGATE_TOKEN \
-  -e LOG_STREAMING_SERVICE_URL=https://app.harness.io/gratis/log-service/ \
+  -e LOG_STREAMING_SERVICE_URL=https://qa.harness.io/log-service/ \
   -e DELEGATE_TAGS="windows-$archtype" \
   -e RUNNER_URL=http://WINDOWS_MACHINE_HOSTNAME_OR_IP:3000 \
-  -e MANAGER_HOST_AND_PORT=https://app.harness.io/gratis harness/delegate:$DELEGATE_IMAGE_VERSION"
+  -e MANAGER_HOST_AND_PORT=https://qa.harness.io harness/delegate:$DELEGATE_IMAGE_VERSION"
     echo $command
 fi
