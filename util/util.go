@@ -12,7 +12,7 @@ import (
 
 var onlyOnce sync.Once
 
-// Register capacity of docker runner node 
+// Register capacity of docker runner node
 func RegisterDelegateCapacity(Id string) {
 	onlyOnce.Do(func() {
 		c := config.GetConfig()

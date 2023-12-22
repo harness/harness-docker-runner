@@ -12,6 +12,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/harness/harness-docker-runner/api"
 	"github.com/harness/harness-docker-runner/logstream"
 	"github.com/sirupsen/logrus"
 )
@@ -45,6 +46,29 @@ func getOutputVarCmd(entrypoint, outputVars []string, outputFile string) string 
 			cmd += fmt.Sprintf("with open('%s', 'a') as out_file:\n\tout_file.write('%s ' + os.getenv('%s') + '\\n')\n", outputFile, o, o)
 		} else {
 			cmd += fmt.Sprintf("\necho \"%s $%s\" >> %s", o, o, outputFile)
+		}
+	}
+
+	return cmd
+}
+
+func getOutputsCmd(entrypoint []string, outputVars []*api.OutputV2, outputFile string) string {
+	isPsh := isPowershell(entrypoint)
+	isPython := isPython(entrypoint)
+
+	cmd := ""
+	if isPsh {
+		cmd += fmt.Sprintf("\nNew-Item %s", outputFile)
+	} else if isPython {
+		cmd += "\nimport os\n"
+	}
+	for _, o := range outputVars {
+		if isPsh {
+			cmd += fmt.Sprintf("\n$val = \"%s $Env:%s\" \nAdd-Content -Path %s -Value $val", o.Key, o.Value, outputFile)
+		} else if isPython {
+			cmd += fmt.Sprintf("with open('%s', 'a') as out_file:\n\tout_file.write('%s ' + os.getenv('%s') + '\\n')\n", outputFile, o.Key, o.Value)
+		} else {
+			cmd += fmt.Sprintf("\necho \"%s $%s\" >> %s", o.Key, o.Value, outputFile)
 		}
 	}
 
