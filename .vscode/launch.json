@@ -22,8 +22,7 @@
             "program": "${workspaceFolder}",
             "args": [
                 "server",
-              ],
-            "sudo": true,
+              ]
         },
         {
             "name": "run client",

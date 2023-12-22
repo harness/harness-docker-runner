@@ -8,7 +8,7 @@ import (
 	"context"
 	"fmt"
 	"io"
-	// "os"
+	"os"
 	"time"
 
 	"github.com/drone/runner-go/pipeline/runtime"
@@ -61,9 +61,9 @@ func executeRunStep(ctx context.Context, engine *engine.Engine, r *api.StartStep
 			return exited, nil, nil, nil, err
 		}
 		// Delete output variable file
-		// if ferr := os.Remove(outputFile); ferr != nil {
-		// 	logrus.WithError(ferr).WithField("file", outputFile).Warnln("could not remove output file")
-		// }
+		if ferr := os.Remove(outputFile); ferr != nil {
+			logrus.WithError(ferr).WithField("file", outputFile).Warnln("could not remove output file")
+		}
 		if len(r.Outputs) > 0 {
 			outputsV2 := []*api.OutputV2{}
 			for _, output := range r.Outputs {
