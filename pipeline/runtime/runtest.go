@@ -22,14 +22,14 @@ import (
 )
 
 func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.StartStepRequest, out io.Writer, tiConfig *tiCfg.Cfg) (
-	*runtime.State, map[string]string, []byte, error) {
+	*runtime.State, map[string]string, []byte, []*api.OutputV2, error) {
 	log := logrus.New()
 	log.Out = out
 
 	start := time.Now()
 	cmd, err := instrumentation.GetCmd(ctx, &r.RunTest, r.Name, r.WorkingDir, log, r.Envs, tiConfig)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	step := toStep(r)
@@ -37,11 +37,13 @@ func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.Start
 	step.Entrypoint = r.RunTest.Entrypoint
 
 	if len(r.OutputVars) > 0 && len(step.Entrypoint) == 0 || len(step.Command) == 0 {
-		return nil, nil, nil, fmt.Errorf("output variable should not be set for unset entrypoint or command")
+		return nil, nil, nil, nil, fmt.Errorf("output variable should not be set for unset entrypoint or command")
 	}
 
 	outputFile := fmt.Sprintf("%s/%s.out", pipeline.SharedVolPath, step.ID)
-	if len(r.OutputVars) > 0 {
+	if len(r.Outputs) > 0 {
+		step.Command[0] += getOutputsCmd(step.Entrypoint, r.Outputs, outputFile)
+	} else if len(r.OutputVars) > 0 {
 		step.Command[0] += getOutputVarCmd(step.Entrypoint, r.OutputVars, outputFile)
 	}
 
@@ -58,15 +60,26 @@ func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.Start
 	}
 
 	artifact, _ := fetchArtifactDataFromArtifactFile(artifactFile, out)
-	if len(r.OutputVars) > 0 {
+	if len(r.Outputs) > 0 {
 		if exited != nil && exited.Exited && exited.ExitCode == 0 {
 			outputs, err := fetchOutputVariables(outputFile, out) // nolint:govet
-			if err != nil {
-				return exited, nil, nil, err
+			outputsV2 := []*api.OutputV2{}
+			for _, output := range r.Outputs {
+				if _, ok := outputs[output.Key]; ok {
+					outputsV2 = append(outputsV2, &api.OutputV2{
+						Key:   output.Key,
+						Value: outputs[output.Key],
+						Type:  output.Type,
+					})
+				}
 			}
-			return exited, outputs, artifact, err
+			return exited, outputs, artifact, outputsV2, err
+		}
+	} else if len(r.OutputVars) > 0 {
+		if exited != nil && exited.Exited && exited.ExitCode == 0 {
+			outputs, err := fetchOutputVariables(outputFile, out) //nolint:govet
+			return exited, outputs, artifact, nil, err
 		}
 	}
-
-	return exited, nil, artifact, err
+	return exited, nil, artifact, nil, err
 }

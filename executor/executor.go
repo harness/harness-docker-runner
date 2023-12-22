@@ -14,7 +14,7 @@ var (
 	once     sync.Once
 )
 
-//TODO:xun add mutex
+// TODO:xun add mutex
 // Executor maps stage runtime ID to the state of the stage
 type Executor struct {
 	m  map[string]*StageData
