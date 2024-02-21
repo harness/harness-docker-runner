@@ -1,48 +1,34 @@
 {
-    "product": "harness-docker-runner",
-    "company": "Harness",
-    "license": "LICENSE",
-    "icon": "ico.ico",
-    "info": {
-      "readme": "[INSTALLDIR]\\README.txt"
-    },
-    "upgrade-code": "",
-    "files": [
+  "product": "harness-docker-runner",
+  "company": "Harness",
+  "license": "LICENSE",
+  "icon": "ico.ico",
+  "info": {
+      "readme": "README.txt"
+  },
+  "upgrade-code": "",
+  "environments": [
       {
-        "path": "lite-engine.exe"
-      }
-    ],
-    "environments": [
-      {
-        "name": "GOOS",
-        "value": "windows",
-        "permanent": "yes",
-        "system": "no",
-        "action": "set",
-        "part": "last"
+          "name": "GOOS",
+          "value": "windows",
+          "permanent": "yes",
+          "system": "no",
+          "action": "set",
+          "part": "last"
       },
       {
-        "name": "path",
-        "value": "[INSTALLDIR]",
-        "permanent": "no",
-        "system": "yes",
-        "action": "set",
-        "part": "last"
-      },
-      {
-        "name": "condition",
-        "value": "ok",
-        "permanent": "no",
-        "system": "no",
-        "action": "set",
-        "part": "last",
-        "condition": "ENVVAR ~= \"yes\""
+          "name": "GOARCH",
+          "value": "amd64",
+          "permanent": "yes",
+          "system" : "no",
+          "action": "set",
+          "part": "last"
       }
-    ],
-    "choco": {
+  ],
+  "choco": {
       "description": "Lite Engine docker runner",
       "project-url": "https://github.com/harness/harness-docker-runner",
       "tags": "docker-runner",
       "license-url": "https://github.com/harness/harness-docker-runner/blob/master/LICENSE.md"
-    }
   }
+}
