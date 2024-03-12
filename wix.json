@@ -1,0 +1,30 @@
+{
+    "product": "harness-docker-runner",
+    "company": "Harness",
+    "license": "LICENSE",
+    "upgrade-code": "8cfb723d-74af-42b2-8fba-95d8a5085327",
+    "files": {
+      "guid": "ad78031e-73d5-40d3-b09e-ef0fd48c7b3f",
+      "items": [
+        "lite-engine.exe"
+      ]
+    },
+    "directories": [
+      "templates"
+    ],
+    "env": {
+      "guid": "e1764191-9ad8-4da3-877c-56d8cef5dab8",
+      "vars": [
+        {
+          "name": "GOOS",
+          "value": "windows",
+          "permanent": "no",
+          "system": "no",
+          "action": "set",
+          "part": "last"
+        }
+      ]
+    },
+    "shortcuts": {},
+    "choco": {}
+  }
