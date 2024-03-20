@@ -208,8 +208,10 @@ func (e *Docker) Destroy(ctx context.Context, pipelineConfig *spec.PipelineConfi
 	}
 
 	// cleanup the network
-	if err := e.client.NetworkRemove(ctx, pipelineConfig.Network.ID); err != nil {
-		logrus.WithField("network", pipelineConfig.Network.ID).WithField("error", err).Warnln("failed to remove network")
+	if e.IsDockerEnabled(pipelineConfig) {
+		if err := e.client.NetworkRemove(ctx, pipelineConfig.Network.ID); err != nil {
+			logrus.WithField("network", pipelineConfig.Network.ID).WithField("error", err).Warnln("failed to remove network")
+		}
 	}
 
 	e.mu.Lock()
@@ -221,6 +223,13 @@ func (e *Docker) Destroy(ctx context.Context, pipelineConfig *spec.PipelineConfi
 	// and instead ask the system admin to periodically run
 	// `docker prune` commands.
 	return nil
+}
+
+func (e *Docker) IsDockerEnabled(pipelineConfig *spec.PipelineConfig) bool {
+	if pipelineConfig.EnableDockerSetup == nil || *pipelineConfig.EnableDockerSetup {
+		return true
+	}
+	return false
 }
 
 // Run runs the pipeline step.

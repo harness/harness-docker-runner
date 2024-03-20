@@ -48,8 +48,13 @@ func HandleSetup(config *config.Config) http.HandlerFunc {
 			return
 		}
 		id := s.ID
+		if config.Runner.RunOnHostOnly {
+			mountDockerSocket := false
+			s.MountDockerSocket = &mountDockerSocket
+		}
 
 		updateVolumes(s)
+		s.Envs["WORKSPACE"] = getWorkSpacePath(s)
 
 		// Add ti volume where all the TI related data (CG, Agent logs, config) will be stored
 		// Add this dir to TIConfig for uploading the data
@@ -160,6 +165,17 @@ func updateVolumes(r api.SetupRequest) {
 			}
 		}
 	}
+}
+
+func getWorkSpacePath(r api.SetupRequest) string {
+	for _, v := range r.Volumes {
+		if v.HostPath != nil {
+			if v.HostPath.ID == "harness" {
+				return v.HostPath.Path
+			}
+		}
+	}
+	return ""
 }
 
 func getSharedVolume() *spec.Volume {

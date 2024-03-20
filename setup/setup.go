@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"runtime"
 
+	"github.com/harness/harness-docker-runner/config"
 	"github.com/sirupsen/logrus"
 )
 
@@ -21,12 +22,12 @@ func GetInstanceInfo() InstanceInfo {
 	return InstanceInfo{osType: osType}
 }
 
-func PrepareSystem() {
+func PrepareSystem(c *config.Config) {
 	instanceInfo := GetInstanceInfo()
 	if !GitInstalled(instanceInfo) {
 		installGit(instanceInfo)
 	}
-	if !DockerInstalled(instanceInfo) {
+	if !c.Runner.RunOnHostOnly && !DockerInstalled(instanceInfo) {
 		installDocker(instanceInfo)
 	}
 }

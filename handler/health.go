@@ -25,7 +25,7 @@ func HandleHealth() http.HandlerFunc {
 			DockerInstalled: dockerOK,
 			GitInstalled:    gitOK,
 			LiteEngineLog:   setup.GetLiteEngineLog(instanceInfo),
-			OK:              dockerOK && gitOK,
+			OK:              true,
 		}
 		WriteJSON(w, response, http.StatusOK)
 	}

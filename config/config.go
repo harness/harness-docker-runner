@@ -17,6 +17,7 @@ type Config struct {
 	Runner struct {
 		Volumes       []string `envconfig:"CI_MOUNT_VOLUMES"`
 		NetworkDriver string   `envconfig:"NETWORK_DRIVER"`
+		RunOnHostOnly bool     `envconfig:"RUN_ON_HOST_ONLY"`
 	}
 
 	Server struct {

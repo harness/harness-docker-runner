@@ -93,7 +93,7 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 	if loadedConfig.Server.SkipPrepareServer {
 		logrus.Infoln("skipping prepare server eg install docker / git")
 	} else {
-		setup.PrepareSystem()
+		setup.PrepareSystem(&loadedConfig)
 	}
 	// starts the http server.
 	err = serverInstance.Start(ctx)
