@@ -38,6 +38,11 @@ func HandleStartStep(config *config.Config) http.HandlerFunc {
 			return
 		}
 
+		if config.Runner.RunOnHostOnly {
+			mountDockerSocket := false
+			s.MountDockerSocket = &mountDockerSocket
+		}
+
 		if s.MountDockerSocket == nil || *s.MountDockerSocket { // required to support m1 where docker isn't installed.
 			s.Volumes = append(s.Volumes, getDockerSockVolumeMount())
 		}
