@@ -28,7 +28,11 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 )
 
-require github.com/dchest/uniuri v0.0.0-20200228104902-7aecb25e1fe5
+require (
+	github.com/dchest/uniuri v0.0.0-20200228104902-7aecb25e1fe5
+	github.com/harness/lite-engine v0.4.9-0.20230131094531-9c0bf7135df4
+	github.com/wings-software/dlite v1.0.0-rc.1.0.20230203100932-b8ab0f1060c8
+)
 
 require (
 	github.com/Masterminds/semver v1.5.0 // indirect
@@ -40,7 +44,7 @@ require (
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/gops v0.3.25 // indirect
 	github.com/google/uuid v1.3.0 // indirect
-	github.com/harness/lite-engine v0.4.9-0.20230131094531-9c0bf7135df4 // indirect
+	github.com/kardianos/service v1.2.2 // indirect
 	github.com/keybase/go-ps v0.0.0-20190827175125-91aafc93ba19 // indirect
 	github.com/klauspost/compress v1.15.14 // indirect
 	github.com/klauspost/pgzip v1.2.5 // indirect
@@ -62,7 +66,6 @@ require (
 	github.com/tklauser/numcpus v0.4.0 // indirect
 	github.com/ulikunitz/xz v0.5.11 // indirect
 	github.com/urfave/cli v1.22.2 // indirect
-	github.com/wings-software/dlite v1.0.0-rc.1.0.20230203100932-b8ab0f1060c8 // indirect
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	github.com/xlab/treeprint v1.1.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect

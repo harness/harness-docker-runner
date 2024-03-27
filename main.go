@@ -5,11 +5,52 @@
 package main
 
 import (
-	"github.com/harness/harness-docker-runner/cli"
+	"runtime"
 
+	"github.com/harness/harness-docker-runner/cli"
 	_ "github.com/joho/godotenv/autoload"
+	"github.com/kardianos/service"
+)
+
+var (
+	logger  service.Logger
+	version string
 )
 
 func main() {
-	cli.Command()
+	if runtime.GOOS == "windows" {
+		svcConfig := &service.Config{
+			Name:        "harness-docker-runner-svc-2",
+			DisplayName: "harness-docker-runner-svc-2",
+			Description: "This is a service runing for harness-docker-runner-2",
+		}
+
+		runAsService(svcConfig, func() {
+			cli.Command()
+		})
+	} else {
+		cli.Command()
+	}
+}
+
+func runAsService(svcConfig *service.Config, run func()) error {
+	s, err := service.New(&program{exec: run}, svcConfig)
+	if err != nil {
+		return err
+	}
+	return s.Run()
+}
+
+type program struct {
+	exec func()
+}
+
+func (p *program) Start(s service.Service) error {
+	// Start should not block. Do the actual work async.
+	go p.exec()
+	return nil
+}
+func (p *program) Stop(s service.Service) error {
+	// Stop should not block. Return with a few seconds.
+	return nil
 }
