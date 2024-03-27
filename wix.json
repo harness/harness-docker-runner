@@ -1,0 +1,21 @@
+{
+  "product": "Harness-Docker-Runner",
+  "company": "Harness",
+  "license": "LICENSE.md",
+  "upgrade-code": "",
+  "files": {
+    "guid": "",
+    "items": [
+      "./harness-docker-runner-windows-amd64.exe",
+      "uninstall.bat"
+    ]
+  },
+  "directories": [
+    "templates"
+  ],
+  "hooks": [
+    {"when": "install", "command": "sc.exe create harness-docker-runner-svc binPath=\"[INSTALLDIR]harness-docker-runner-windows-amd64.exe server\" start=auto DisplayName=\"harness-docker-runner-svc\""},
+    {"when": "install", "command": "sc.exe start harness-docker-runner-svc"},
+    {"when": "uninstall", "command": "[INSTALLDIR]uninstall.bat"}
+  ]
+}
