@@ -1,0 +1,20 @@
+{
+  "product": "Harness-Docker-2",
+  "company": "Harness",
+  "license": "LICENSE",
+  "upgrade-code": "",
+  "files": {
+    "guid": "",
+    "items": [
+      "./lite-engine.exe"
+    ]
+  },
+  "directories": [
+    "templates"
+  ],
+  "hooks": [
+    {"when": "install", "command": "sc.exe create harness-docker-runner-svc-2 binPath=\"[INSTALLDIR]lite-engine.exe server >C:/Users/installer/Documents/harness-docker-runner/log-file.log\"  type=share start=auto DisplayName=\"harness-docker-runner-svc-2\""},
+    {"when": "install", "command": "sc.exe start harness-docker-runner-svc-2"},
+    {"when": "uninstall", "command": "sc.exe delete harness-docker-runner-svc-2"}
+  ]
+}
