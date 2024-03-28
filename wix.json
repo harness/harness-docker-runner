@@ -15,7 +15,8 @@
   "hooks": [
     {"when": "install", "command": "sc.exe create harness-docker-runner-svc binPath=\"[INSTALLDIR]lite-engine.exe server\" start=auto DisplayName=\"harness-docker-runner-svc\""},
     {"when": "install", "command": "sc.exe start harness-docker-runner-svc"},
-    {"when": "uninstall", "command": "sc.exe stop harness-docker-runner-svc"},
-    {"when": "uninstall", "command": "sc.exe delete harness-docker-runner-svc"}
+    {"when": "uninstall", "command": "sc.exe query harness-docker-runner-svc"},
+    {"when": "uninstall", "command": "sc.exe delete harness-docker-runner-svc"},
+    {"when": "uninstall", "command": "sc.exe stop harness-docker-runner-svc"}
   ]
 }
