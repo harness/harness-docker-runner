@@ -148,7 +148,7 @@ func initLogging(c *config.Config) {
 	if RunTime.GOOS == "windows" {
 		dir, _ := os.Getwd()
 		logFilePath := dir + string(os.PathSeparator) + "harness-docker-runner-" + time.Now().Format("2-January-2006") + ".log"
-		logrus.Errorln("Logs will be dumped to : " + logFilePath)
+		logrus.Infoln("Logs will be dumped to : " + logFilePath)
 		file, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 		if err != nil {
 			logger.L.Logger.Infoln("Failed to open log file:", err)
