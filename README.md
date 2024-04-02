@@ -26,7 +26,7 @@ If you want to install Harness-Docker-Runner as a service in Windows, please fol
 #### Installation
 * Download the msi (harness-docker-runner-svc.msi) from latest github release
 * Double click on the msi to start the installation process
-* Accept the liecence, click next and finish the installation.
+* Accept the license, click next and finish the installation.
 * You can test your service availibility by running below command in your cmd terminal
 ```
   curl http://localhost:3000/healthz
