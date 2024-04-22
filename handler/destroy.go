@@ -39,16 +39,16 @@ func HandleDestroy() http.HandlerFunc {
 
 		if err != nil {
 			logger.FromRequest(r).WithError(err).WithField("id", s.ID).Errorln("stage mapping does not exist")
-			WriteError(w, err)
+			WriteNotFound(w, err)
 			return
 		}
-		ex.Remove(s.ID)
 
 		if d != nil {
 			logger.FromRequest(r).WithField("id", s.ID).Traceln("starting the destroy process")
 			if err := d.Engine.Destroy(r.Context()); err != nil {
 				WriteError(w, err)
 			} else {
+				ex.Remove(s.ID)
 				logger.FromRequest(r).
 					WithField("latency", time.Since(st)).
 					WithField("time", time.Now().Format(time.RFC3339)).
