@@ -16,7 +16,7 @@ var onlyOnce sync.Once
 func RegisterDelegateCapacity(Id string) {
 	onlyOnce.Do(func() {
 		c := config.GetConfig()
-		cl := delegate.New(c.DelegateCapacity.ManagerEndpoint, c.DelegateCapacity.AccountID, c.DelegateCapacity.Secret, false)
+		cl := delegate.New(c.DelegateCapacity.ManagerEndpoint, c.DelegateCapacity.AccountID, c.DelegateCapacity.Secret, false, "")
 		err := cl.RegisterCapacity(context.Background(), Id, &client.DelegateCapacity{MaxBuilds: c.DelegateCapacity.MaxBuilds})
 		if err != nil {
 			logrus.WithError(err).Errorln("failed to register delegate capacity")
