@@ -48,7 +48,7 @@ func HandleDestroy() http.HandlerFunc {
 
 				if err := handleDestroyInternal(r, s); err != nil {
 					if duration == backoff.Stop {
-						logger.FromRequest(r).WithField("id", s.ID).WithError(err).Errorln("could not cleanup resources")
+						logger.FromRequest(r).WithField("id", s.ID).WithError(err).Errorln("Failed to destroy resources")
 						return
 					}
 					if lastErr == nil || lastErr.Error() != err.Error() {
