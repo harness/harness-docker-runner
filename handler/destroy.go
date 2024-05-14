@@ -5,6 +5,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -74,7 +75,7 @@ func handleDestroyInternal(r *http.Request, s api.DestroyRequest) error {
 	}
 	if d != nil {
 		logger.FromRequest(r).WithField("id", s.ID).Traceln("starting the destroy process")
-		if err := d.Engine.Destroy(r.Context()); err != nil {
+		if err := d.Engine.Destroy(context.Background()); err != nil {
 			return err
 		} else {
 			ex.Remove(s.ID)
