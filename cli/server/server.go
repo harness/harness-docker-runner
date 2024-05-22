@@ -22,7 +22,7 @@ import (
 	"github.com/harness/harness-docker-runner/server"
 	"github.com/harness/harness-docker-runner/setup"
 
-	"github.com/joho/godotenv"
+	"github.com/harness/godotenv/v3"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"
 )

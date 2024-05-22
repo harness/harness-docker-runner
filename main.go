@@ -8,7 +8,6 @@ import (
 	"runtime"
 
 	"github.com/harness/harness-docker-runner/cli"
-	_ "github.com/joho/godotenv/autoload"
 	"github.com/kardianos/service"
 )
 
