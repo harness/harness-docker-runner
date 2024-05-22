@@ -12,9 +12,16 @@ import (
 	"os"
 	"strings"
 
+	"github.com/harness/godotenv/v3"
 	"github.com/harness/harness-docker-runner/api"
+	"github.com/harness/harness-docker-runner/engine/spec"
 	"github.com/harness/harness-docker-runner/logstream"
 	"github.com/sirupsen/logrus"
+)
+
+const (
+	ciEnableDotEnvSupport = "CI_ENABLE_DOTENV_SUPPORT"
+	trueValue             = "true"
 )
 
 func getNudges() []logstream.Nudge {
@@ -29,11 +36,15 @@ func getNudges() []logstream.Nudge {
 	}
 }
 
-func getOutputVarCmd(entrypoint, outputVars []string, outputFile string) string {
+func getOutputVarCmd(entrypoint, outputVars []string, outputFile string, shouldEnableDotEnvSupport bool) string {
 	isPsh := isPowershell(entrypoint)
 	isPython := isPython(entrypoint)
 
 	cmd := ""
+	delimiter := " "
+	if shouldEnableDotEnvSupport {
+		delimiter = "="
+	}
 	if isPsh {
 		cmd += fmt.Sprintf("\nNew-Item %s", outputFile)
 	} else if isPython {
@@ -41,22 +52,26 @@ func getOutputVarCmd(entrypoint, outputVars []string, outputFile string) string 
 	}
 	for _, o := range outputVars {
 		if isPsh {
-			cmd += fmt.Sprintf("\n$val = \"%s $Env:%s\" \nAdd-Content -Path %s -Value $val", o, o, outputFile)
+			cmd += fmt.Sprintf("\n$val = \"%s%s$Env:%s\" \nAdd-Content -Path %s -Value $val", o, delimiter, o, outputFile)
 		} else if isPython {
-			cmd += fmt.Sprintf("with open('%s', 'a') as out_file:\n\tout_file.write('%s ' + os.getenv('%s') + '\\n')\n", outputFile, o, o)
+			cmd += fmt.Sprintf("with open('%s', 'a') as out_file:\n\tout_file.write('%s%s' + os.getenv('%s') + '\\n')\n", outputFile, o, delimiter, o)
 		} else {
-			cmd += fmt.Sprintf("\necho \"%s $%s\" >> %s", o, o, outputFile)
+			cmd += fmt.Sprintf("\necho \"%s%s$%s\" >> %s", o, delimiter, o, outputFile)
 		}
 	}
 
 	return cmd
 }
 
-func getOutputsCmd(entrypoint []string, outputVars []*api.OutputV2, outputFile string) string {
+func getOutputsCmd(entrypoint []string, outputVars []*api.OutputV2, outputFile string, shouldEnableDotEnvSupport bool) string {
 	isPsh := isPowershell(entrypoint)
 	isPython := isPython(entrypoint)
 
 	cmd := ""
+	delimiter := " "
+	if shouldEnableDotEnvSupport {
+		delimiter = "="
+	}
 	if isPsh {
 		cmd += fmt.Sprintf("\nNew-Item %s", outputFile)
 	} else if isPython {
@@ -64,11 +79,11 @@ func getOutputsCmd(entrypoint []string, outputVars []*api.OutputV2, outputFile s
 	}
 	for _, o := range outputVars {
 		if isPsh {
-			cmd += fmt.Sprintf("\n$val = \"%s $Env:%s\" \nAdd-Content -Path %s -Value $val", o.Key, o.Value, outputFile)
+			cmd += fmt.Sprintf("\n$val = \"%s%s$Env:%s\" \nAdd-Content -Path %s -Value $val", o.Key, delimiter, o.Value, outputFile)
 		} else if isPython {
-			cmd += fmt.Sprintf("with open('%s', 'a') as out_file:\n\tout_file.write('%s ' + os.getenv('%s') + '\\n')\n", outputFile, o.Key, o.Value)
+			cmd += fmt.Sprintf("with open('%s', 'a') as out_file:\n\tout_file.write('%s%s' + os.getenv('%s') + '\\n')\n", outputFile, o.Key, delimiter, o.Value)
 		} else {
-			cmd += fmt.Sprintf("\necho \"%s $%s\" >> %s", o.Key, o.Value, outputFile)
+			cmd += fmt.Sprintf("\necho \"%s%s$%s\" >> %s", o.Key, delimiter, o.Value, outputFile)
 		}
 	}
 
@@ -140,4 +155,40 @@ func fetchOutputVariables(outputFile string, out io.Writer) (map[string]string, 
 		return nil, err
 	}
 	return outputs, nil
+}
+
+func fetchExportedVarsFromEnvFile(envFile string, out io.Writer) (map[string]string, error) {
+	log := logrus.New()
+	log.Out = out
+
+	if _, err := os.Stat(envFile); errors.Is(err, os.ErrNotExist) {
+		return nil, err
+	}
+
+	var (
+		env map[string]string
+		err error
+	)
+	env, err = godotenv.Read(envFile)
+
+	if err != nil {
+		content, ferr := os.ReadFile(envFile)
+		if ferr != nil {
+			log.WithError(ferr).WithField("envFile", envFile).Warnln("Unable to read exported env file")
+		}
+		log.WithError(err).WithField("envFile", envFile).WithField("content", string(content)).Warnln("failed to read exported env file")
+		if errors.Is(err, bufio.ErrTooLong) {
+			err = fmt.Errorf("output variable length is more than %d bytes", bufio.MaxScanTokenSize)
+		}
+		return nil, err
+	}
+	return env, nil
+}
+
+func IsFeatureFlagEnabled(featureFlagName string, step *spec.Step) bool {
+	if step == nil {
+		return false
+	}
+	val, ok := step.Envs[featureFlagName]
+	return ok && val == trueValue
 }
