@@ -15,14 +15,14 @@ require (
 	github.com/go-chi/chi v1.5.4
 	github.com/gofrs/uuid v4.3.1+incompatible
 	github.com/golang/mock v1.6.0
-	github.com/hashicorp/go-multierror v1.1.1
 	github.com/harness/godotenv/v3 v3.0.0
+	github.com/hashicorp/go-multierror v1.1.1
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/linkedin/goavro/v2 v2.12.0
 	github.com/mholt/archiver/v3 v3.5.1
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.0
-	github.com/stretchr/testify v1.8.1
+	github.com/stretchr/testify v1.9.0
 	golang.org/x/sync v0.1.0
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/yaml.v2 v2.4.0
@@ -68,7 +68,6 @@ require (
 )
 
 require (
-	github.com/kardianos/service v1.2.2 // indirect
 	github.com/99designs/httpsignatures-go v0.0.0-20170731043157-88528bf4ca7e // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
 	github.com/Microsoft/go-winio v0.6.0 // indirect
@@ -84,6 +83,7 @@ require (
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
+	github.com/kardianos/service v1.2.2 // indirect
 	github.com/mattn/go-zglob v0.0.4
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/natessilva/dag v0.0.0-20180124060714-7194b8dcc5c4 // indirect
