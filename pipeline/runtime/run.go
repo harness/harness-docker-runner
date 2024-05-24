@@ -101,6 +101,12 @@ func executeRunStep(ctx context.Context, engine *engine.Engine, r *api.StartStep
 					outputsV2 = append(outputsV2, output)
 				}
 			}
+			// Delete output variable file
+			if _, err := os.Stat(outputFile); err == nil {
+				if ferr := os.Remove(outputFile); ferr != nil {
+					logrus.WithError(ferr).WithField("file", outputFile).Warnln("could not remove output file")
+				}
+			}
 
 			//checking exported secrets from plugins if any
 			if _, err := os.Stat(outputSecretsFile); err == nil {
@@ -116,7 +122,10 @@ func executeRunStep(ctx context.Context, engine *engine.Engine, r *api.StartStep
 					}
 					outputsV2 = append(outputsV2, output)
 				}
-
+				// Delete output secrets file
+				if ferr := os.Remove(outputSecretsFile); ferr != nil {
+					logrus.WithError(ferr).WithField("file", outputSecretsFile).Warnln("could not remove output secrets file")
+				}
 			}
 
 			return exited, outputs, artifact, outputsV2, finalErr
