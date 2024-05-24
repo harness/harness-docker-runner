@@ -31,7 +31,7 @@ func executeRunStep(ctx context.Context, engine *engine.Engine, r *api.StartStep
 		return nil, nil, nil, nil, fmt.Errorf("output variable should not be set for unset entrypoint or command")
 	}
 
-	shouldEnableDotEnvSupport := IsFeatureFlagEnabled(ciEnableDotEnvSupport, step)
+	shouldEnableDotEnvSupport := IsFeatureFlagEnabled(ciEnableDotEnvSupport, engine, step)
 
 	var outputFile string
 
@@ -41,10 +41,10 @@ func executeRunStep(ctx context.Context, engine *engine.Engine, r *api.StartStep
 		outputFile = fmt.Sprintf("%s/%s-output.env", pipeline.SharedVolPath, step.ID)
 		step.Envs["DRONE_OUTPUT"] = outputFile
 
-		outputSecretsFile := fmt.Sprintf("%s/%s-output-secrets.env", pipeline.SharedVolPath, step.ID)
+		outputSecretsFile = fmt.Sprintf("%s/%s-output-secrets.env", pipeline.SharedVolPath, step.ID)
 		step.Envs["HARNESS_OUTPUT_SECRET_FILE"] = outputSecretsFile
 	} else {
-		outputFile := fmt.Sprintf("%s/%s.out", pipeline.SharedVolPath, step.ID)
+		outputFile = fmt.Sprintf("%s/%s.out", pipeline.SharedVolPath, step.ID)
 		step.Envs["DRONE_OUTPUT"] = outputFile
 	}
 

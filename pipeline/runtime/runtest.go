@@ -40,7 +40,7 @@ func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.Start
 		return nil, nil, nil, nil, fmt.Errorf("output variable should not be set for unset entrypoint or command")
 	}
 
-	shouldEnableDotEnvSupport := IsFeatureFlagEnabled(ciEnableDotEnvSupport, step)
+	shouldEnableDotEnvSupport := IsFeatureFlagEnabled(ciEnableDotEnvSupport, engine, step)
 
 	var outputFile string
 	if shouldEnableDotEnvSupport {

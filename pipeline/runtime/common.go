@@ -14,13 +14,14 @@ import (
 
 	"github.com/harness/godotenv/v3"
 	"github.com/harness/harness-docker-runner/api"
+	"github.com/harness/harness-docker-runner/engine"
 	"github.com/harness/harness-docker-runner/engine/spec"
 	"github.com/harness/harness-docker-runner/logstream"
 	"github.com/sirupsen/logrus"
 )
 
 const (
-	ciEnableDotEnvSupport = "CI_ENABLE_DOTENV_SUPPORT"
+	ciEnableDotEnvSupport = "CI_ENABLE_DOTENV_SUPPORT_DOCKER"
 	trueValue             = "true"
 )
 
@@ -185,7 +186,10 @@ func fetchExportedVarsFromEnvFile(envFile string, out io.Writer) (map[string]str
 	return env, nil
 }
 
-func IsFeatureFlagEnabled(featureFlagName string, step *spec.Step) bool {
+func IsFeatureFlagEnabled(featureFlagName string, engine *engine.Engine, step *spec.Step) bool {
+	if engine != nil && engine.IsFeatureFlagEnabled(featureFlagName) {
+		return true
+	}
 	if step == nil {
 		return false
 	}
