@@ -162,8 +162,9 @@ func fetchExportedVarsFromEnvFile(envFile string, out io.Writer) (map[string]str
 	log := logrus.New()
 	log.Out = out
 
+	defaultOutputs := make(map[string]string)
 	if _, err := os.Stat(envFile); errors.Is(err, os.ErrNotExist) {
-		return nil, err
+		return defaultOutputs, nil
 	}
 
 	var (
