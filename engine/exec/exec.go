@@ -19,20 +19,23 @@ func Run(ctx context.Context, step *spec.Step, output io.Writer) (*runtime.State
 		return nil, errors.New("step entrypoint cannot be empty")
 	}
 
-	cmdArgs := step.Entrypoint[1:]
-	cmdArgs = append(cmdArgs, step.Command...)
+	// cmdArgs := step.Entrypoint[1:]
+	// cmdArgs = append(cmdArgs, step.Command...)
 
-	cmd := exec.Command(step.Entrypoint[0], cmdArgs...) //nolint:gosec
+	cmd := exec.Command("/bin/sh") //nolint:gosec
 	cmd.Dir = step.WorkingDir
 	cmd.Env = toEnv(step.Envs)
 	cmd.Stderr = output
 	cmd.Stdout = output
 
-	if err := cmd.Start(); err != nil {
+	session, err := NewShellSession(cmd)
+	if err != nil {
 		return nil, err
 	}
 
-	err := cmd.Wait()
+	NewShellContext(step.Name, session)
+	err = <-session.errors
+
 	if err == nil {
 		return &runtime.State{ExitCode: 0, Exited: true}, nil
 	}
@@ -41,6 +44,14 @@ func Run(ctx context.Context, step *spec.Step, output io.Writer) (*runtime.State
 		return &runtime.State{ExitCode: exitErr.ExitCode(), Exited: true}, nil
 	}
 	return nil, err
+}
+
+func Debug(ctx context.Context, stepID, command string, last bool) {
+	ss := GetShellSessionState(stepID)
+	ss.Add(stepID, command)
+	if last {
+		ss.Wait(stepID)
+	}
 }
 
 // helper function that converts a key value map of

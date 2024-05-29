@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi"
+	"github.com/go-chi/cors"
 	"github.com/go-chi/chi/middleware"
 	"github.com/harness/harness-docker-runner/config"
 	"github.com/harness/harness-docker-runner/engine"
@@ -18,6 +19,16 @@ import (
 // Handler returns an http.Handler that exposes the service resources.
 func Handler(config *config.Config, engine *engine.Engine, stepExecutor *runtime.StepExecutor) http.Handler {
 	r := chi.NewRouter()
+	// Set up CORS middleware options
+    c := cors.New(cors.Options{
+        AllowedOrigins:   []string{"*"}, // Allow all origins
+        AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}, // Allow specific HTTP methods
+        AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token", "ngrok-skip-browser-warning"},
+        ExposedHeaders:   []string{"Link"},
+        AllowCredentials: false,
+        MaxAge:           300, // Max age for the preflight request cache
+    })
+	r.Use(c.Handler)
 	r.Use(logger.Middleware)
 	r.Use(middleware.Recoverer)
 
@@ -53,6 +64,15 @@ func Handler(config *config.Config, engine *engine.Engine, stepExecutor *runtime
 	r.Mount("/healthz", func() http.Handler {
 		sr := chi.NewRouter()
 		sr.Get("/", HandleHealth())
+		return sr
+	}())
+
+	r.Mount("/debug", func() http.Handler {
+		sr := chi.NewRouter()
+		sr.Post("/", HandleDebug())
+		// sr.Options("/", func(w http.ResponseWriter, r *http.Request) {
+		// 	w.WriteHeader(http.StatusOK)
+		// })
 		return sr
 	}())
 

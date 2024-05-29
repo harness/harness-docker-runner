@@ -20,7 +20,7 @@ type Config struct {
 	}
 
 	Server struct {
-		Bind              string `envconfig:"HTTPS_BIND" default:":3000"`
+		Bind              string `envconfig:"HTTPS_BIND" default:":3001"`
 		CertFile          string `envconfig:"SERVER_CERT_FILE" default:"/tmp/certs/server-cert.pem"` // Server certificate PEM file
 		KeyFile           string `envconfig:"SERVER_KEY_FILE" default:"/tmp/certs/server-key.pem"`   // Server key PEM file
 		CACertFile        string `envconfig:"CLIENT_CERT_FILE" default:"/tmp/certs/ca-cert.pem"`     // CA certificate file

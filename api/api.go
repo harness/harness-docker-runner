@@ -69,6 +69,13 @@ type (
 		ID string `json:"id"` // stage runtime ID
 	}
 
+	DebugRequest struct {
+		StepID         string `json:"step_id"`
+		Command        string `json:"command"`
+		Last           bool   `json:"last"`
+		StageRuntimeID string `json:"stage_runtime_id"`
+	}
+
 	DestroyResponse struct{}
 
 	StartStepRequest struct {
