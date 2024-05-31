@@ -23,6 +23,8 @@ import (
 const (
 	ciEnableDotEnvSupport = "CI_ENABLE_DOTENV_SUPPORT_DOCKER"
 	trueValue             = "true"
+	outputDelimiterSpace  = " "
+	outputDelimiterEquals = "="
 )
 
 func getNudges() []logstream.Nudge {
@@ -42,9 +44,9 @@ func getOutputVarCmd(entrypoint, outputVars []string, outputFile string, shouldE
 	isPython := isPython(entrypoint)
 
 	cmd := ""
-	delimiter := " "
+	delimiter := outputDelimiterSpace
 	if shouldEnableDotEnvSupport {
-		delimiter = "="
+		delimiter = outputDelimiterEquals
 	}
 	if isPsh {
 		cmd += fmt.Sprintf("\nNew-Item %s", outputFile)
@@ -69,9 +71,9 @@ func getOutputsCmd(entrypoint []string, outputVars []*api.OutputV2, outputFile s
 	isPython := isPython(entrypoint)
 
 	cmd := ""
-	delimiter := " "
+	delimiter := outputDelimiterSpace
 	if shouldEnableDotEnvSupport {
-		delimiter = "="
+		delimiter = outputDelimiterEquals
 	}
 	if isPsh {
 		cmd += fmt.Sprintf("\nNew-Item %s", outputFile)
@@ -174,6 +176,7 @@ func fetchExportedVarsFromEnvFile(envFile string, out io.Writer) (map[string]str
 	env, err = godotenv.Read(envFile)
 
 	if err != nil {
+		fetchOutputVariables(envFile, out)
 		content, ferr := os.ReadFile(envFile)
 		if ferr != nil {
 			log.WithError(ferr).WithField("envFile", envFile).Warnln("Unable to read exported env file")

@@ -71,7 +71,6 @@ func executeRunStep(ctx context.Context, engine *engine.Engine, r *api.StartStep
 	artifact, _ := fetchArtifactDataFromArtifactFile(artifactFile, out)
 	if exited != nil && exited.Exited && exited.ExitCode == 0 {
 		if shouldEnableDotEnvSupport {
-
 			outputs, err := fetchExportedVarsFromEnvFile(outputFile, out)
 			outputsV2 := []*api.OutputV2{}
 			var finalErr error
@@ -131,7 +130,6 @@ func executeRunStep(ctx context.Context, engine *engine.Engine, r *api.StartStep
 			return exited, outputs, artifact, outputsV2, finalErr
 
 		} else {
-
 			outputs, err := fetchOutputVariables(outputFile, out) // nolint:govet
 			if err != nil {
 				return exited, nil, nil, nil, err

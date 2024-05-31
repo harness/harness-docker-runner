@@ -7,6 +7,7 @@ package main
 import (
 	"runtime"
 
+	_ "github.com/harness/godotenv/v3/autoload"
 	"github.com/harness/harness-docker-runner/cli"
 	"github.com/kardianos/service"
 )
