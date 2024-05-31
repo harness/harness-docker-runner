@@ -21,10 +21,10 @@ import (
 )
 
 const (
-	ciEnableDotEnvSupport = "CI_ENABLE_DOTENV_SUPPORT_DOCKER"
-	trueValue             = "true"
-	outputDelimiterSpace  = " "
-	outputDelimiterEquals = "="
+	ciEnablePluginOutputSecrets = "CI_ENABLE_PLUGIN_OUTPUT_SECRETS"
+	trueValue                   = "true"
+	outputDelimiterSpace        = " "
+	outputDelimiterEquals       = "="
 )
 
 func getNudges() []logstream.Nudge {

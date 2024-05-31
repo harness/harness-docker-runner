@@ -40,19 +40,19 @@ func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.Start
 		return nil, nil, nil, nil, fmt.Errorf("output variable should not be set for unset entrypoint or command")
 	}
 
-	shouldEnableDotEnvSupport := IsFeatureFlagEnabled(ciEnableDotEnvSupport, engine, step)
+	enablePluginOutputSecrets := IsFeatureFlagEnabled(ciEnablePluginOutputSecrets, engine, step)
 
 	var outputFile string
-	if shouldEnableDotEnvSupport {
+	if enablePluginOutputSecrets {
 		outputFile = fmt.Sprintf("%s/%s-output.env", pipeline.SharedVolPath, step.ID)
 	} else {
 		outputFile = fmt.Sprintf("%s/%s.out", pipeline.SharedVolPath, step.ID)
 	}
 
 	if len(r.Outputs) > 0 {
-		step.Command[0] += getOutputsCmd(step.Entrypoint, r.Outputs, outputFile, shouldEnableDotEnvSupport)
+		step.Command[0] += getOutputsCmd(step.Entrypoint, r.Outputs, outputFile, enablePluginOutputSecrets)
 	} else if len(r.OutputVars) > 0 {
-		step.Command[0] += getOutputVarCmd(step.Entrypoint, r.OutputVars, outputFile, shouldEnableDotEnvSupport)
+		step.Command[0] += getOutputVarCmd(step.Entrypoint, r.OutputVars, outputFile, enablePluginOutputSecrets)
 	}
 
 	artifactFile := fmt.Sprintf("%s/%s-artifact", pipeline.SharedVolPath, step.ID)
@@ -72,7 +72,7 @@ func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.Start
 	var outputErr error
 	if len(r.Outputs) > 0 {
 		if exited != nil && exited.Exited && exited.ExitCode == 0 {
-			if shouldEnableDotEnvSupport {
+			if enablePluginOutputSecrets {
 				outputs, outputErr = fetchExportedVarsFromEnvFile(outputFile, out) // nolint:govet
 			} else {
 				outputs, outputErr = fetchOutputVariables(outputFile, out) // nolint:govet
@@ -92,7 +92,7 @@ func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.Start
 		}
 	} else if len(r.OutputVars) > 0 {
 		if exited != nil && exited.Exited && exited.ExitCode == 0 {
-			if shouldEnableDotEnvSupport {
+			if enablePluginOutputSecrets {
 				outputs, outputErr = fetchExportedVarsFromEnvFile(outputFile, out) // nolint:govet
 			} else {
 				outputs, outputErr = fetchOutputVariables(outputFile, out) // nolint:govet
