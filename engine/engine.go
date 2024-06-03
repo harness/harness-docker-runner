@@ -25,6 +25,7 @@ const (
 	DockerSockVolName  = "_docker"
 	DockerSockUnixPath = "/var/run/docker.sock"
 	DockerSockWinPath  = `\\.\pipe\docker_engine`
+	trueValue          = "true"
 )
 
 type Engine struct {
@@ -198,4 +199,12 @@ func matchDockerSockPath(s string) bool {
 		return true
 	}
 	return false
+}
+
+func (e *Engine) IsFeatureFlagEnabled(featureFlagName string) bool {
+	if e.pipelineConfig == nil || e.pipelineConfig.Envs == nil {
+		return false
+	}
+	val, ok := e.pipelineConfig.Envs[featureFlagName]
+	return ok && val == trueValue
 }

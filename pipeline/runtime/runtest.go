@@ -40,11 +40,19 @@ func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.Start
 		return nil, nil, nil, nil, fmt.Errorf("output variable should not be set for unset entrypoint or command")
 	}
 
-	outputFile := fmt.Sprintf("%s/%s.out", pipeline.SharedVolPath, step.ID)
+	enablePluginOutputSecrets := IsFeatureFlagEnabled(ciEnablePluginOutputSecrets, engine, step)
+
+	var outputFile string
+	if enablePluginOutputSecrets {
+		outputFile = fmt.Sprintf("%s/%s-output.env", pipeline.SharedVolPath, step.ID)
+	} else {
+		outputFile = fmt.Sprintf("%s/%s.out", pipeline.SharedVolPath, step.ID)
+	}
+
 	if len(r.Outputs) > 0 {
-		step.Command[0] += getOutputsCmd(step.Entrypoint, r.Outputs, outputFile)
+		step.Command[0] += getOutputsCmd(step.Entrypoint, r.Outputs, outputFile, enablePluginOutputSecrets)
 	} else if len(r.OutputVars) > 0 {
-		step.Command[0] += getOutputVarCmd(step.Entrypoint, r.OutputVars, outputFile)
+		step.Command[0] += getOutputVarCmd(step.Entrypoint, r.OutputVars, outputFile, enablePluginOutputSecrets)
 	}
 
 	artifactFile := fmt.Sprintf("%s/%s-artifact", pipeline.SharedVolPath, step.ID)
@@ -60,9 +68,16 @@ func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.Start
 	}
 
 	artifact, _ := fetchArtifactDataFromArtifactFile(artifactFile, out)
+	var outputs map[string]string
+	var outputErr error
 	if len(r.Outputs) > 0 {
 		if exited != nil && exited.Exited && exited.ExitCode == 0 {
-			outputs, err := fetchOutputVariables(outputFile, out) // nolint:govet
+			if enablePluginOutputSecrets {
+				outputs, outputErr = fetchExportedVarsFromEnvFile(outputFile, out) // nolint:govet
+			} else {
+				outputs, outputErr = fetchOutputVariables(outputFile, out, false) // nolint:govet
+			}
+
 			outputsV2 := []*api.OutputV2{}
 			for _, output := range r.Outputs {
 				if _, ok := outputs[output.Key]; ok {
@@ -73,12 +88,16 @@ func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.Start
 					})
 				}
 			}
-			return exited, outputs, artifact, outputsV2, err
+			return exited, outputs, artifact, outputsV2, outputErr
 		}
 	} else if len(r.OutputVars) > 0 {
 		if exited != nil && exited.Exited && exited.ExitCode == 0 {
-			outputs, err := fetchOutputVariables(outputFile, out) //nolint:govet
-			return exited, outputs, artifact, nil, err
+			if enablePluginOutputSecrets {
+				outputs, outputErr = fetchExportedVarsFromEnvFile(outputFile, out) // nolint:govet
+			} else {
+				outputs, outputErr = fetchOutputVariables(outputFile, out, false) // nolint:govet
+			}
+			return exited, outputs, artifact, nil, outputErr
 		}
 	}
 	return exited, nil, artifact, nil, err
