@@ -125,11 +125,15 @@ func isPython(entrypoint []string) bool {
 
 // Fetches map of env variable and value from OutputFile.
 // OutputFile stores all env variable and value
-func fetchOutputVariables(outputFile string, out io.Writer) (map[string]string, error) {
+func fetchOutputVariables(outputFile string, out io.Writer, isDotEnvFile bool) (map[string]string, error) {
 	log := logrus.New()
 	log.Out = out
 
 	outputs := make(map[string]string)
+	delimiter := outputDelimiterSpace
+	if isDotEnvFile {
+		delimiter = outputDelimiterEquals
+	}
 
 	// The output file maybe not exist - we don't consider that an error
 	if _, err := os.Stat(outputFile); os.IsNotExist(err) {
@@ -146,7 +150,7 @@ func fetchOutputVariables(outputFile string, out io.Writer) (map[string]string, 
 	s := bufio.NewScanner(f)
 	for s.Scan() {
 		line := s.Text()
-		sa := strings.Split(line, " ")
+		sa := strings.Split(line, delimiter)
 		if len(sa) < 2 { // nolint:gomnd
 			log.WithField("variable", sa[0]).Warnln("output variable does not exist")
 		} else {
@@ -176,16 +180,21 @@ func fetchExportedVarsFromEnvFile(envFile string, out io.Writer) (map[string]str
 	env, err = godotenv.Read(envFile)
 
 	if err != nil {
-		fetchOutputVariables(envFile, out)
-		content, ferr := os.ReadFile(envFile)
-		if ferr != nil {
-			log.WithError(ferr).WithField("envFile", envFile).Warnln("Unable to read exported env file")
+		//fallback incase any parsing issue from godotenv package
+		fallbackEnv, fallbackErr := fetchOutputVariables(envFile, out, true)
+		if fallbackErr != nil {
+			content, ferr := os.ReadFile(envFile)
+			if ferr != nil {
+				log.WithError(ferr).WithField("envFile", envFile).Warnln("Unable to read exported env file")
+			}
+			log.WithError(err).WithField("envFile", envFile).WithField("content", string(content)).Warnln("failed to read exported env file")
+			if errors.Is(err, bufio.ErrTooLong) {
+				err = fmt.Errorf("output variable length is more than %d bytes", bufio.MaxScanTokenSize)
+			}
+			return nil, err
 		}
-		log.WithError(err).WithField("envFile", envFile).WithField("content", string(content)).Warnln("failed to read exported env file")
-		if errors.Is(err, bufio.ErrTooLong) {
-			err = fmt.Errorf("output variable length is more than %d bytes", bufio.MaxScanTokenSize)
-		}
-		return nil, err
+		return fallbackEnv, nil
+
 	}
 	return env, nil
 }

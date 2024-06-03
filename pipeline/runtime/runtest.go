@@ -75,7 +75,7 @@ func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.Start
 			if enablePluginOutputSecrets {
 				outputs, outputErr = fetchExportedVarsFromEnvFile(outputFile, out) // nolint:govet
 			} else {
-				outputs, outputErr = fetchOutputVariables(outputFile, out) // nolint:govet
+				outputs, outputErr = fetchOutputVariables(outputFile, out, false) // nolint:govet
 			}
 
 			outputsV2 := []*api.OutputV2{}
@@ -95,7 +95,7 @@ func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.Start
 			if enablePluginOutputSecrets {
 				outputs, outputErr = fetchExportedVarsFromEnvFile(outputFile, out) // nolint:govet
 			} else {
-				outputs, outputErr = fetchOutputVariables(outputFile, out) // nolint:govet
+				outputs, outputErr = fetchOutputVariables(outputFile, out, false) // nolint:govet
 			}
 			return exited, outputs, artifact, nil, outputErr
 		}

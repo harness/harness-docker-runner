@@ -130,7 +130,7 @@ func executeRunStep(ctx context.Context, engine *engine.Engine, r *api.StartStep
 			return exited, outputs, artifact, outputsV2, finalErr
 
 		} else {
-			outputs, err := fetchOutputVariables(outputFile, out) // nolint:govet
+			outputs, err := fetchOutputVariables(outputFile, out, false) // nolint:govet
 			if err != nil {
 				return exited, nil, nil, nil, err
 			}
