@@ -9,9 +9,18 @@ ostype=$(uname)
 # Get the machine architecture type
 archtype=$(uname -m)
 
-if [ "$archtype" = "x86_64" ]; then
-    archtype="amd64"
-fi
+case "$archtype" in
+    amd64 | x86_64)
+        archtype="amd64"
+        ;;
+    arm64 | aarch64)
+        archtype="arm64"
+        ;;
+    *)
+        echo "Unsupported architecture: $archtype"
+        exit 1
+        ;;
+esac
 
 # Account ID from script argument
 ACCOUNT_ID=$1
@@ -44,16 +53,16 @@ if [ "$ostype" = "Darwin" ]; then
 
     # Download the harness-docker-runner for macOS
     echo "Downloading the runner binary"
-    wget -q https://github.com/harness/harness-docker-runner/releases/latest/download/harness-docker-runner-darwin-$archtype 
-    
+    wget -q https://github.com/harness/harness-docker-runner/releases/latest/download/harness-docker-runner-darwin-$archtype
+
     # Make the downloaded file executable
     echo "Chmod runner binary"
-    sudo chmod +x harness-docker-runner-darwin-$archtype 
-    
+    sudo chmod +x harness-docker-runner-darwin-$archtype
+
     # Start the harness-docker-runner server
     echo "running the binary"
     sudo ./harness-docker-runner-darwin-$archtype server &
-    
+
 elif [ "$ostype" = "Linux" ]; then
     echo "Running commands for Linux"
 
@@ -76,11 +85,11 @@ elif [ "$ostype" = "Linux" ]; then
     rm -f harness-docker-runner-linux-$archtype
 
     # Download the harness-docker-runner for Linux
-    wget -q https://github.com/harness/harness-docker-runner/releases/latest/download/harness-docker-runner-linux-$archtype 
-    
+    wget -q https://github.com/harness/harness-docker-runner/releases/latest/download/harness-docker-runner-linux-$archtype
+
     # Make the downloaded file executable
-    sudo chmod +x harness-docker-runner-linux-$archtype 
-    
+    sudo chmod +x harness-docker-runner-linux-$archtype
+
     # Start the harness-docker-runner server
     sudo ./harness-docker-runner-linux-$archtype server &
 else
@@ -90,7 +99,7 @@ else
 
     # Download the harness-docker-runner for Windows
     curl -L -o harness-docker-runner-windows-$archtype.exe https://github.com/harness/harness-docker-runner/releases/latest/download/harness-docker-runner-windows-$archtype.exe
-    
+
     # Start the harness-docker-runner server
     ./harness-docker-runner-windows-$archtype.exe server &
 
