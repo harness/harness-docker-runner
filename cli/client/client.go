@@ -137,10 +137,11 @@ func runStage(client *HTTPClient, remoteLog bool) error {
 	}
 	if remoteLog {
 		setupConfig.LogConfig = api.LogConfig{
-			URL:            "http://localhost:8079",
-			AccountID:      "kmpy",
-			Token:          "token",
-			IndirectUpload: true,
+			URL:                   "http://localhost:8079",
+			AccountID:             "kmpy",
+			Token:                 "token",
+			IndirectUpload:        true,
+			IndirectUploadSetting: true,
 		}
 	}
 	setup := &api.SetupRequest{
