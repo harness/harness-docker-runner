@@ -15,15 +15,15 @@ require (
 	github.com/go-chi/chi v1.5.4
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/golang/mock v1.6.0
+	github.com/harness/godotenv/v3 v3.0.0
 	github.com/hashicorp/go-multierror v1.1.1
-	github.com/joho/godotenv v1.4.0
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/linkedin/goavro/v2 v2.12.0
 	github.com/mholt/archiver/v3 v3.5.1
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.0
-	github.com/stretchr/testify v1.8.4
-	golang.org/x/sync v0.3.0
+	github.com/stretchr/testify v1.9.0
+	golang.org/x/sync v0.1.0
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/yaml.v2 v2.4.0
 )

@@ -16,7 +16,7 @@ import (
 	"github.com/harness/harness-docker-runner/engine/spec"
 	"github.com/harness/harness-docker-runner/logger"
 
-	"github.com/joho/godotenv"
+	"github.com/harness/godotenv/v3"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"

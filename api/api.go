@@ -127,9 +127,9 @@ type (
 	}
 
 	OutputV2 struct {
-		Key   string `json:"key,omitempty"`
-		Value string `json:"value,omitempty"`
-		Type  string `json:"type,omitempty"`
+		Key   string     `json:"key,omitempty"`
+		Value string     `json:"value,omitempty"`
+		Type  OutputType `json:"type,omitempty"`
 	}
 
 	DelegateMetaInfo struct {
@@ -189,4 +189,11 @@ type (
 	JunitReport struct {
 		Paths []string `json:"paths,omitempty"`
 	}
+)
+
+type OutputType string
+
+const (
+	OutputTypeString OutputType = "STRING"
+	OutputTypeSecret OutputType = "SECRET"
 )
