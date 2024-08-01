@@ -23,9 +23,10 @@ const (
 )
 
 type (
-	RunTestConfig = leapi.RunTestConfig
-	TestReport    = leapi.TestReport
-	TIConfig      = leapi.TIConfig
+	RunTestConfig    = leapi.RunTestConfig
+	RunTestsV2Config = leapi.RunTestsV2Config
+	TestReport       = leapi.TestReport
+	TIConfig         = leapi.TIConfig
 )
 
 type (
@@ -92,6 +93,7 @@ type (
 		Kind       StepType          `json:"kind,omitempty"`
 		Run        RunConfig         `json:"run,omitempty"`
 		RunTest    RunTestConfig     `json:"run_test,omitempty"`
+		RunTestsV2 RunTestsV2Config  `json:"run_test_v2,omitempty"`
 
 		OutputVars        []string    `json:"output_vars,omitempty"`
 		TestReport        TestReport  `json:"test_report,omitempty"`
