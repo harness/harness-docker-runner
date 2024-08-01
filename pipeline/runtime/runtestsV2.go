@@ -23,6 +23,10 @@ import (
 	"github.com/harness/lite-engine/ti/report"
 )
 
+const (
+	outDir = "%s/ti/v2/callgraph/cg/"
+)
+
 func executeRunTestsV2Step(ctx context.Context, engine *engine.Engine, r *api.StartStepRequest, out io.Writer, tiConfig *tiCfg.Cfg) (
 	*runtime.State, map[string]string, []byte, []*api.OutputV2, error) {
 	log := logrus.New()
@@ -73,12 +77,17 @@ func executeRunTestsV2Step(ctx context.Context, engine *engine.Engine, r *api.St
 	step.Envs["PLUGIN_ARTIFACT_FILE"] = artifactFile
 
 	exited, err := engine.Run(ctx, step, out)
-	logrus.WithField("step_id", r.ID).WithField("stage_id", r.StageRuntimeID).Traceln("completed step run")
+	logrus.WithField("step_id", r.ID).WithField("stage_id", r.StageRuntimeID).Traceln("completed step runtestv2")
+
+	if len(r.TestReport.Junit.Paths) == 0 {
+		// If there are no paths specified, set Paths[0] to include all XML files and all TRX files
+		r.TestReport.Junit.Paths = []string{"**/*.xml", "**/*.trx"}
+	}
 	if rerr := report.ParseAndUploadTests(ctx, r.TestReport, r.WorkingDir, step.Name, log, time.Now(), tiConfig, r.Envs); rerr != nil {
 		log.WithError(rerr).Errorln("failed to upload report")
 	}
 
-	if uerr := callgraph.Upload(ctx, step.Name, time.Since(start).Milliseconds(), log, time.Now(), tiConfig, cgDir); uerr != nil {
+	if uerr := callgraph.Upload(ctx, step.Name, time.Since(start).Milliseconds(), log, time.Now(), tiConfig, outDir); uerr != nil {
 		log.WithError(uerr).Errorln("unable to collect callgraph")
 	}
 
