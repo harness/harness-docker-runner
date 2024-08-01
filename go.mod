@@ -42,7 +42,7 @@ require (
 	github.com/google/gops v0.3.25 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/harness/godotenv/v2 v2.0.0 // indirect
-	github.com/harness/lite-engine v0.5.77 // indirect
+	github.com/harness/lite-engine v0.5.78 // indirect
 	github.com/harness/ti-client v0.0.0-20240617230757-1e90e7e3ada2 // indirect
 	github.com/keybase/go-ps v0.0.0-20190827175125-91aafc93ba19 // indirect
 	github.com/klauspost/compress v1.16.3 // indirect
