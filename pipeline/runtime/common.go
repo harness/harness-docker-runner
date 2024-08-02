@@ -12,6 +12,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/drone/runner-go/pipeline/runtime"
 	"github.com/harness/godotenv/v3"
 	"github.com/harness/harness-docker-runner/api"
 	"github.com/harness/harness-docker-runner/engine"
@@ -208,4 +209,12 @@ func IsFeatureFlagEnabled(featureFlagName string, engine *engine.Engine, step *s
 	}
 	val, ok := step.Envs[featureFlagName]
 	return ok && val == trueValue
+}
+
+// checkStepSuccess checks if the step was successful based on the return values
+func checkStepSuccess(state *runtime.State, err error) bool {
+	if err == nil && state != nil && state.ExitCode == 0 && state.Exited {
+		return true
+	}
+	return false
 }

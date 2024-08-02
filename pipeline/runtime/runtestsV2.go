@@ -21,6 +21,8 @@ import (
 	"github.com/harness/lite-engine/ti/callgraph"
 	tiCfg "github.com/harness/lite-engine/ti/config"
 	"github.com/harness/lite-engine/ti/report"
+	"github.com/harness/lite-engine/ti/savings"
+	"github.com/harness/ti-client/types"
 )
 
 const (
@@ -28,15 +30,16 @@ const (
 )
 
 func executeRunTestsV2Step(ctx context.Context, engine *engine.Engine, r *api.StartStepRequest, out io.Writer, tiConfig *tiCfg.Cfg) (
-	*runtime.State, map[string]string, []byte, []*api.OutputV2, error) {
+	*runtime.State, map[string]string, []byte, []*api.OutputV2, string, error) {
+	start := time.Now()
 	log := logrus.New()
 	log.Out = out
 	step := toStep(r)
-	start := time.Now()
+	optimizationState := types.DISABLED
 	step.Entrypoint = r.RunTestsV2.Entrypoint
 	preCmd, err := leRuntime.SetupRunTestV2(ctx, &r.RunTestsV2, step.Name, r.WorkingDir, log, r.Envs, tiConfig)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, nil, string(optimizationState), err
 	}
 	command := r.RunTestsV2.Command[0]
 	if preCmd != "" {
@@ -45,7 +48,7 @@ func executeRunTestsV2Step(ctx context.Context, engine *engine.Engine, r *api.St
 	step.Command = []string{command}
 
 	if (len(r.OutputVars) > 0 || len(r.Outputs) > 0) && (len(step.Entrypoint) == 0 || len(step.Command) == 0) {
-		return nil, nil, nil, nil, fmt.Errorf("output variable should not be set for unset entrypoint or command")
+		return nil, nil, nil, nil, string(optimizationState), fmt.Errorf("output variable should not be set for unset entrypoint or command")
 	}
 
 	enablePluginOutputSecrets := IsFeatureFlagEnabled(ciEnablePluginOutputSecrets, engine, step)
@@ -77,6 +80,7 @@ func executeRunTestsV2Step(ctx context.Context, engine *engine.Engine, r *api.St
 	step.Envs["PLUGIN_ARTIFACT_FILE"] = artifactFile
 
 	exited, err := engine.Run(ctx, step, out)
+	timeTakenMs := time.Since(start).Milliseconds()
 	logrus.WithField("step_id", r.ID).WithField("stage_id", r.StageRuntimeID).Traceln("completed step runtestv2")
 
 	if len(r.TestReport.Junit.Paths) == 0 {
@@ -89,6 +93,11 @@ func executeRunTestsV2Step(ctx context.Context, engine *engine.Engine, r *api.St
 
 	if uerr := callgraph.Upload(ctx, step.Name, time.Since(start).Milliseconds(), log, time.Now(), tiConfig, outDir); uerr != nil {
 		log.WithError(uerr).Errorln("unable to collect callgraph")
+	}
+
+	// Parse and upload savings to TI
+	if tiConfig.GetParseSavings() {
+		optimizationState = savings.ParseAndUploadSavings(ctx, r.WorkingDir, log, step.Name, checkStepSuccess(exited, err), timeTakenMs, tiConfig, r.Envs)
 	}
 
 	artifact, _ := fetchArtifactDataFromArtifactFile(artifactFile, out)
@@ -150,12 +159,12 @@ func executeRunTestsV2Step(ctx context.Context, engine *engine.Engine, r *api.St
 				}
 			}
 
-			return exited, outputs, artifact, outputsV2, finalErr
+			return exited, outputs, artifact, outputsV2, string(optimizationState), finalErr
 
 		} else {
 			outputs, err := fetchOutputVariables(outputFile, out, false) // nolint:govet
 			if err != nil {
-				return exited, nil, nil, nil, err
+				return exited, nil, nil, nil, string(optimizationState), err
 			}
 			// Delete output variable file
 			if ferr := os.Remove(outputFile); ferr != nil {
@@ -172,11 +181,11 @@ func executeRunTestsV2Step(ctx context.Context, engine *engine.Engine, r *api.St
 						})
 					}
 				}
-				return exited, outputs, artifact, outputsV2, err
+				return exited, outputs, artifact, outputsV2, string(optimizationState), err
 			}
-			return exited, outputs, artifact, nil, err
+			return exited, outputs, artifact, nil, string(optimizationState), err
 		}
 	}
 
-	return exited, nil, artifact, nil, err
+	return exited, nil, artifact, nil, string(optimizationState), err
 }

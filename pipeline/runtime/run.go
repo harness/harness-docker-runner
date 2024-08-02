@@ -19,16 +19,20 @@ import (
 	"github.com/harness/harness-docker-runner/pipeline"
 	tiCfg "github.com/harness/lite-engine/ti/config"
 	"github.com/harness/lite-engine/ti/report"
+	"github.com/harness/lite-engine/ti/savings"
+	"github.com/harness/ti-client/types"
 )
 
 func executeRunStep(ctx context.Context, engine *engine.Engine, r *api.StartStepRequest, out io.Writer, tiConfig *tiCfg.Cfg) (
-	*runtime.State, map[string]string, []byte, []*api.OutputV2, error) {
+	*runtime.State, map[string]string, []byte, []*api.OutputV2, string, error) {
+	start := time.Now()
 	step := toStep(r)
 	step.Command = r.Run.Command
 	step.Entrypoint = r.Run.Entrypoint
 
+	optimizationState := types.DISABLED
 	if (len(r.OutputVars) > 0 || len(r.Outputs) > 0) && (len(step.Entrypoint) == 0 || len(step.Command) == 0) {
-		return nil, nil, nil, nil, fmt.Errorf("output variable should not be set for unset entrypoint or command")
+		return nil, nil, nil, nil, string(optimizationState), fmt.Errorf("output variable should not be set for unset entrypoint or command")
 	}
 
 	enablePluginOutputSecrets := IsFeatureFlagEnabled(ciEnablePluginOutputSecrets, engine, step)
@@ -63,9 +67,15 @@ func executeRunStep(ctx context.Context, engine *engine.Engine, r *api.StartStep
 	step.Envs["PLUGIN_ARTIFACT_FILE"] = artifactFile
 
 	exited, err := engine.Run(ctx, step, out)
+	timeTakenMs := time.Since(start).Milliseconds()
 	logrus.WithField("step_id", r.ID).WithField("stage_id", r.StageRuntimeID).Traceln("completed step run")
 	if rerr := report.ParseAndUploadTests(ctx, r.TestReport, r.WorkingDir, step.Name, log, time.Now(), tiConfig, r.Envs); rerr != nil {
 		logrus.WithError(rerr).WithField("step", step.Name).Errorln("failed to upload report")
+	}
+
+	// Parse and upload savings to TI
+	if tiConfig.GetParseSavings() {
+		optimizationState = savings.ParseAndUploadSavings(ctx, r.WorkingDir, log, step.Name, checkStepSuccess(exited, err), timeTakenMs, tiConfig, r.Envs)
 	}
 
 	artifact, _ := fetchArtifactDataFromArtifactFile(artifactFile, out)
@@ -127,12 +137,12 @@ func executeRunStep(ctx context.Context, engine *engine.Engine, r *api.StartStep
 				}
 			}
 
-			return exited, outputs, artifact, outputsV2, finalErr
+			return exited, outputs, artifact, outputsV2, string(optimizationState), finalErr
 
 		} else {
 			outputs, err := fetchOutputVariables(outputFile, out, false) // nolint:govet
 			if err != nil {
-				return exited, nil, nil, nil, err
+				return exited, nil, nil, nil, string(optimizationState), err
 			}
 			// Delete output variable file
 			if ferr := os.Remove(outputFile); ferr != nil {
@@ -149,11 +159,11 @@ func executeRunStep(ctx context.Context, engine *engine.Engine, r *api.StartStep
 						})
 					}
 				}
-				return exited, outputs, artifact, outputsV2, err
+				return exited, outputs, artifact, outputsV2, string(optimizationState), err
 			}
-			return exited, outputs, artifact, nil, err
+			return exited, outputs, artifact, nil, string(optimizationState), err
 		}
 	}
 
-	return exited, nil, artifact, nil, err
+	return exited, nil, artifact, nil, string(optimizationState), err
 }
