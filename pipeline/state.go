@@ -73,6 +73,10 @@ func (s *State) GetTIConfig() *tiCfg.Cfg {
 	return &s.tiConfig
 }
 
+func (s *State) GetLogConfig() *api.LogConfig {
+	return &s.logConfig
+}
+
 func (s *State) GetNetwork() string {
 	return s.network
 }

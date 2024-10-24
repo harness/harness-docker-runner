@@ -59,7 +59,7 @@ func NewStepExecutor(engine *engine.Engine) *StepExecutor {
 	}
 }
 
-func (e *StepExecutor) StartStep(ctx context.Context, r *api.StartStepRequest, secrets []string, client logstream.Client, tiConfig *tiCfg.Cfg) error {
+func (e *StepExecutor) StartStep(ctx context.Context, r *api.StartStepRequest, secrets []string, client logstream.Client, tiConfig *tiCfg.Cfg, logConfig *api.LogConfig) error {
 	if r.ID == "" {
 		return &errors.BadRequestError{Msg: "ID needs to be set"}
 	}
@@ -75,7 +75,7 @@ func (e *StepExecutor) StartStep(ctx context.Context, r *api.StartStepRequest, s
 	e.mu.Unlock()
 
 	go func() {
-		state, outputs, artifact, outputV2, optimizationState, stepErr := e.executeStep(r, secrets, client, tiConfig)
+		state, outputs, artifact, outputV2, optimizationState, stepErr := e.executeStep(r, secrets, client, tiConfig, logConfig)
 		status := StepStatus{Status: Complete, State: state, StepErr: stepErr, Outputs: outputs, Artifact: artifact, OutputV2: outputV2, OptimizationState: optimizationState}
 		e.mu.Lock()
 		e.stepStatus[r.ID] = status
@@ -231,13 +231,13 @@ func (e *StepExecutor) executeStepDrone(r *api.StartStepRequest, tiConfig *tiCfg
 	return runStep()
 }
 
-func (e *StepExecutor) executeStep(r *api.StartStepRequest, secrets []string, client logstream.Client, tiConfig *tiCfg.Cfg) (*runtime.State, map[string]string, []byte, []*api.OutputV2, string, error) {
+func (e *StepExecutor) executeStep(r *api.StartStepRequest, secrets []string, client logstream.Client, tiConfig *tiCfg.Cfg, logConfig *api.LogConfig) (*runtime.State, map[string]string, []byte, []*api.OutputV2, string, error) {
 	if r.LogDrone {
 		state, err := e.executeStepDrone(r, tiConfig)
 		return state, nil, nil, nil, "", err
 	}
 
-	wc := livelog.New(client, r.LogKey, r.Name, getNudges())
+	wc := livelog.New(client, r.LogKey, r.Name, getNudges(), logConfig.TrimNewLineSuffix)
 	wr := logstream.NewReplacer(wc, secrets)
 	err := wr.Open() // nolint:errcheck
 	if err != nil {

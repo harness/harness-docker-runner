@@ -74,7 +74,7 @@ func HandleSetup(config *config.Config) http.HandlerFunc {
 			log.Out = os.Stdout
 		} else {
 			client := state.GetLogStreamClient()
-			wc := livelog.New(client, s.LogKey, id, nil)
+			wc := livelog.New(client, s.LogKey, id, nil, s.LogConfig.TrimNewLineSuffix)
 			defer func() {
 				if err := wc.Close(); err != nil {
 					logrus.WithError(err).Debugln("failed to close log stream")

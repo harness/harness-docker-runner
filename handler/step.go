@@ -77,7 +77,7 @@ func HandleStartStep(config *config.Config) http.HandlerFunc {
 		ctx := r.Context()
 		logger.FromRequest(r).WithField("stage_id", s.StageRuntimeID).
 			WithField("step_id", s.ID).Traceln("starting step execution")
-		if err := stageData.StepExecutor.StartStep(ctx, &s, stageData.State.GetSecrets(), stageData.State.GetLogStreamClient(), stageData.State.GetTIConfig()); err != nil {
+		if err := stageData.StepExecutor.StartStep(ctx, &s, stageData.State.GetSecrets(), stageData.State.GetLogStreamClient(), stageData.State.GetTIConfig(), stageData.State.GetLogConfig()); err != nil {
 			WriteError(w, err)
 		}
 
