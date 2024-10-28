@@ -47,23 +47,25 @@ type Writer struct {
 	history  []*logstream.Line
 	prev     []byte
 
-	closed bool
-	close  chan struct{}
-	ready  chan struct{}
+	closed            bool
+	trimNewLineSuffix bool
+	close             chan struct{}
+	ready             chan struct{}
 }
 
 // New returns a new writer
-func New(client logstream.Client, key, name string, nudges []logstream.Nudge) *Writer {
+func New(client logstream.Client, key, name string, nudges []logstream.Nudge, trimNewLineSuffix bool) *Writer {
 	b := &Writer{
-		client:   client,
-		key:      key,
-		name:     name,
-		now:      time.Now(),
-		limit:    defaultLimit,
-		interval: defaultInterval,
-		nudges:   nudges,
-		close:    make(chan struct{}),
-		ready:    make(chan struct{}, 1),
+		client:            client,
+		key:               key,
+		name:              name,
+		now:               time.Now(),
+		limit:             defaultLimit,
+		interval:          defaultInterval,
+		nudges:            nudges,
+		close:             make(chan struct{}),
+		ready:             make(chan struct{}, 1),
+		trimNewLineSuffix: trimNewLineSuffix,
 	}
 	go b.Start()
 	return b
@@ -105,6 +107,11 @@ func (b *Writer) Write(p []byte) (n int, err error) {
 		if part == "" {
 			continue
 		}
+
+		if b.trimNewLineSuffix {
+			part = strings.TrimSuffix(part, "\n")
+		}
+
 		line := &logstream.Line{
 			Level:       defaultLevel,
 			Message:     part,
