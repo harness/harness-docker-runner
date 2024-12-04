@@ -2,8 +2,6 @@ module github.com/harness/harness-docker-runner
 
 go 1.22
 
-toolchain go1.22.9
-
 replace github.com/docker/docker => github.com/docker/engine v17.12.0-ce-rc1.0.20200309214505-aa6a9891b09c+incompatible
 
 require (
