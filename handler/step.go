@@ -17,6 +17,7 @@ import (
 	"github.com/harness/harness-docker-runner/config"
 	"github.com/harness/harness-docker-runner/executor"
 	"github.com/harness/harness-docker-runner/pipeline"
+	"github.com/harness/harness-docker-runner/ti"
 	"github.com/harness/harness-docker-runner/util"
 
 	"github.com/harness/harness-docker-runner/api"
@@ -50,6 +51,14 @@ func HandleStartStep(config *config.Config) http.HandlerFunc {
 		}
 		s.Volumes = append(s.Volumes, getSharedVolumeMount())
 		s.Volumes = append(s.Volumes, getGlobalVolumesMount(config)...)
+
+		tiVol := findTiVolume(stageData)
+		if tiVol != nil { // append TI volume ("/tmp/ti-<setup_id>"). Already added during setup.
+			s.Volumes = append(s.Volumes, &spec.VolumeMount{
+				Name: tiVol.HostPath.Name,
+				Path: tiVol.HostPath.Path,
+			})
+		}
 
 		stageData.State.AppendSecrets(s.Secrets)
 
@@ -100,6 +109,16 @@ func HandleStartStep(config *config.Config) http.HandlerFunc {
 			WithField("time", time.Now().Format(time.RFC3339)).
 			Infoln("api: successfully completed step execution")
 	}
+}
+
+func findTiVolume(stageData *executor.StageData) *spec.Volume {
+	volumes := stageData.State.GetVolumes()
+	for _, v := range volumes {
+		if v.HostPath != nil && v.HostPath.Name == ti.VolumeName {
+			return v
+		}
+	}
+	return nil
 }
 
 func convert(err error) api.PollStepResponse {
