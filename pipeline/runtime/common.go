@@ -19,6 +19,8 @@ import (
 	"github.com/harness/harness-docker-runner/engine/spec"
 	"github.com/harness/harness-docker-runner/logstream"
 	"github.com/sirupsen/logrus"
+
+	leapi "github.com/harness/lite-engine/api"
 )
 
 const (
@@ -217,4 +219,27 @@ func checkStepSuccess(state *runtime.State, err error) bool {
 		return true
 	}
 	return false
+}
+
+// function to convert outputv2 from lite-engine outputv2 to api.OutputV2
+func convertOutputV2(outputV2 []*leapi.OutputV2) []*api.OutputV2 {
+	outputs := []*api.OutputV2{}
+	for _, output := range outputV2 {
+		// convert leapi.OutputType to api.OutputType
+		var outputType api.OutputType
+		switch output.Type {
+		case leapi.OutputTypeSecret:
+			outputType = api.OutputTypeSecret
+		case leapi.OutputTypeString:
+			outputType = api.OutputTypeString
+		default:
+			outputType = api.OutputTypeString
+		}
+		outputs = append(outputs, &api.OutputV2{
+			Key:   output.Key,
+			Value: output.Value,
+			Type:  outputType,
+		})
+	}
+	return outputs
 }

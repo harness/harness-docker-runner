@@ -79,6 +79,14 @@ func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.Start
 		optimizationState = savings.ParseAndUploadSavings(ctx, r.WorkingDir, log, step.Name, checkStepSuccess(exited, err), timeTakenMs, tiConfig, r.Envs)
 	}
 
+	summaryOutputs := make(map[string]string)
+	reportSaveErr := report.SaveReportSummaryToOutputs(ctx, tiConfig, step.Name, summaryOutputs, log, r.Envs)
+	if reportSaveErr != nil {
+		log.Warnf("Error while saving report summary to outputs %s", reportSaveErr.Error())
+	}
+	leSummaryOutputV2 := report.GetSummaryOutputsV2(summaryOutputs, r.Envs)
+	summaryOutputsV2 := convertOutputV2(leSummaryOutputV2)
+
 	artifact, _ := fetchArtifactDataFromArtifactFile(artifactFile, out)
 	var outputs map[string]string
 	var outputErr error
@@ -88,6 +96,12 @@ func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.Start
 				outputs, outputErr = fetchExportedVarsFromEnvFile(outputFile, out) // nolint:govet
 			} else {
 				outputs, outputErr = fetchOutputVariables(outputFile, out, false) // nolint:govet
+			}
+
+			if report.TestSummaryAsOutputEnabled(r.Envs) && len(summaryOutputs) > 0 {
+				for k, v := range summaryOutputs {
+					outputs[k] = v
+				}
 			}
 
 			outputsV2 := []*api.OutputV2{}
@@ -100,7 +114,13 @@ func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.Start
 					})
 				}
 			}
+			if report.TestSummaryAsOutputEnabled(r.Envs) {
+				outputsV2 = append(outputsV2, summaryOutputsV2...)
+			}
 			return exited, outputs, artifact, outputsV2, string(optimizationState), outputErr
+		}
+		if len(summaryOutputsV2) > 0 && report.TestSummaryAsOutputEnabled(r.Envs) {
+			return exited, summaryOutputs, artifact, summaryOutputsV2, string(optimizationState), err
 		}
 	} else if len(r.OutputVars) > 0 {
 		if exited != nil && exited.Exited && exited.ExitCode == 0 {
@@ -109,8 +129,22 @@ func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.Start
 			} else {
 				outputs, outputErr = fetchOutputVariables(outputFile, out, false) // nolint:govet
 			}
+			if len(summaryOutputs) != 0 && report.TestSummaryAsOutputEnabled(r.Envs) {
+				for k, v := range summaryOutputs {
+					outputs[k] = v
+				}
+			}
 			return exited, outputs, artifact, nil, string(optimizationState), outputErr
 		}
+		if len(summaryOutputs) != 0 && len(summaryOutputsV2) != 0 && report.TestSummaryAsOutputEnabled(r.Envs) {
+			// when step has failed return the actual error
+			return exited, summaryOutputs, artifact, summaryOutputsV2, string(optimizationState), err
+		}
 	}
-	return exited, nil, artifact, nil, string(optimizationState), err
+
+	if len(summaryOutputsV2) == 0 || !report.TestSummaryAsOutputEnabled(r.Envs) {
+		return exited, nil, artifact, nil, string(optimizationState), err
+	}
+
+	return exited, summaryOutputs, artifact, summaryOutputsV2, string(optimizationState), err
 }

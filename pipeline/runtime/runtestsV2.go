@@ -101,6 +101,13 @@ func executeRunTestsV2Step(ctx context.Context, engine *engine.Engine, r *api.St
 	}
 
 	artifact, _ := fetchArtifactDataFromArtifactFile(artifactFile, out)
+	summaryOutputs := make(map[string]string)
+	reportSaveErr := report.SaveReportSummaryToOutputs(ctx, tiConfig, step.Name, summaryOutputs, log, r.Envs)
+	if reportSaveErr != nil {
+		log.Errorf("Error while saving report summary to outputs %s", reportSaveErr.Error())
+	}
+	leSummaryOutputsV2 := report.GetSummaryOutputsV2(summaryOutputs, r.Envs)
+	summaryOutputsV2 := convertOutputV2(leSummaryOutputsV2)
 	if exited != nil && exited.Exited && exited.ExitCode == 0 {
 		if enablePluginOutputSecrets {
 			outputs, err := fetchExportedVarsFromEnvFile(outputFile, out)
@@ -159,6 +166,10 @@ func executeRunTestsV2Step(ctx context.Context, engine *engine.Engine, r *api.St
 				}
 			}
 
+			if report.TestSummaryAsOutputEnabled(r.Envs) {
+				outputsV2 = append(outputsV2, summaryOutputsV2...)
+			}
+
 			return exited, outputs, artifact, outputsV2, string(optimizationState), finalErr
 
 		} else {
@@ -181,11 +192,25 @@ func executeRunTestsV2Step(ctx context.Context, engine *engine.Engine, r *api.St
 						})
 					}
 				}
+				if report.TestSummaryAsOutputEnabled(r.Envs) {
+					outputsV2 = append(outputsV2, summaryOutputsV2...)
+				}
 				return exited, outputs, artifact, outputsV2, string(optimizationState), err
+			} else if len(r.OutputVars) > 0 {
+				// only return err when output vars are expected
+				if report.TestSummaryAsOutputEnabled(r.Envs) {
+					return exited, summaryOutputs, artifact, summaryOutputsV2, string(optimizationState), err
+				}
+				return exited, outputs, artifact, nil, string(optimizationState), err
 			}
-			return exited, outputs, artifact, nil, string(optimizationState), err
+			if len(summaryOutputsV2) != 0 && report.TestSummaryAsOutputEnabled(r.Envs) {
+				return exited, outputs, artifact, summaryOutputsV2, string(optimizationState), nil
+			}
+			return exited, outputs, artifact, nil, string(optimizationState), nil
 		}
 	}
-
+	if len(summaryOutputsV2) != 0 && report.TestSummaryAsOutputEnabled(r.Envs) {
+		return exited, summaryOutputs, artifact, summaryOutputsV2, string(optimizationState), err
+	}
 	return exited, nil, artifact, nil, string(optimizationState), err
 }
