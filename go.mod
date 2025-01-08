@@ -21,7 +21,7 @@ require (
 	github.com/linkedin/goavro/v2 v2.12.0
 	github.com/mholt/archiver/v3 v3.5.1
 	github.com/pkg/errors v0.9.1
-	github.com/sirupsen/logrus v1.9.0
+	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.9.0
 	golang.org/x/sync v0.3.0
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
@@ -42,7 +42,7 @@ require (
 	github.com/google/gops v0.3.25 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/harness/godotenv/v2 v2.0.0 // indirect
-	github.com/harness/lite-engine v0.5.81 // indirect
+	github.com/harness/lite-engine v0.5.89 // indirect
 	github.com/harness/ti-client v0.0.0-20240617230757-1e90e7e3ada2 // indirect
 	github.com/keybase/go-ps v0.0.0-20190827175125-91aafc93ba19 // indirect
 	github.com/klauspost/compress v1.16.3 // indirect
@@ -60,7 +60,7 @@ require (
 	github.com/tklauser/go-sysconf v0.3.11 // indirect
 	github.com/tklauser/numcpus v0.6.0 // indirect
 	github.com/ulikunitz/xz v0.5.11 // indirect
-	github.com/wings-software/dlite v1.0.0-rc.11 // indirect
+	github.com/wings-software/dlite v1.0.0-rc.13 // indirect
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	github.com/xlab/treeprint v1.1.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.3 // indirect
