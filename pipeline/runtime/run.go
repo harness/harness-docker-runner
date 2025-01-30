@@ -79,6 +79,16 @@ func executeRunStep(ctx context.Context, engine *engine.Engine, r *api.StartStep
 	}
 
 	artifact, _ := fetchArtifactDataFromArtifactFile(artifactFile, out)
+	summaryOutputs := make(map[string]string)
+	if r.TestReport.Junit.Paths != nil && len(r.TestReport.Junit.Paths) > 0 {
+		reportSaveErr := report.SaveReportSummaryToOutputs(ctx, tiConfig, step.Name, summaryOutputs, log, r.Envs)
+		if reportSaveErr == nil && report.TestSummaryAsOutputEnabled(r.Envs) {
+			log.Info("Test summary set as output variables")
+		}
+	}
+	leSummaryOutputsV2 := report.GetSummaryOutputsV2(summaryOutputs, r.Envs)
+	summaryOutputsV2 := convertOutputV2(leSummaryOutputsV2)
+
 	if exited != nil && exited.Exited && exited.ExitCode == 0 {
 		if enablePluginOutputSecrets {
 			outputs, err := fetchExportedVarsFromEnvFile(outputFile, out)
@@ -137,6 +147,10 @@ func executeRunStep(ctx context.Context, engine *engine.Engine, r *api.StartStep
 				}
 			}
 
+			if report.TestSummaryAsOutputEnabled(r.Envs) {
+				outputsV2 = append(outputsV2, summaryOutputsV2...)
+			}
+
 			return exited, outputs, artifact, outputsV2, string(optimizationState), finalErr
 
 		} else {
@@ -159,11 +173,20 @@ func executeRunStep(ctx context.Context, engine *engine.Engine, r *api.StartStep
 						})
 					}
 				}
+				if report.TestSummaryAsOutputEnabled(r.Envs) {
+					outputsV2 = append(outputsV2, summaryOutputsV2...)
+				}
 				return exited, outputs, artifact, outputsV2, string(optimizationState), err
+			}
+			if len(summaryOutputsV2) > 0 && report.TestSummaryAsOutputEnabled(r.Envs) {
+				return exited, summaryOutputs, artifact, summaryOutputsV2, string(optimizationState), err
 			}
 			return exited, outputs, artifact, nil, string(optimizationState), err
 		}
 	}
+	if len(summaryOutputsV2) == 0 || !report.TestSummaryAsOutputEnabled(r.Envs) {
+		return exited, nil, artifact, nil, string(optimizationState), err
+	}
 
-	return exited, nil, artifact, nil, string(optimizationState), err
+	return exited, summaryOutputs, artifact, summaryOutputsV2, string(optimizationState), err
 }
