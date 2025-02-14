@@ -87,7 +87,7 @@ func HandleSetup(config *config.Config) http.HandlerFunc {
 		logr = log.WithField("id", s.ID).
 			WithField("correlation_id", s.CorrelationID)
 
-		logr.Traceln("starting setup execution")
+		logr.Traceln("starting setup execution from Nasser changes")
 		logger.FromRequest(r).Traceln("starting the setup process")
 
 		if s.MountDockerSocket == nil || *s.MountDockerSocket { // required to support m1 where docker isn't installed.

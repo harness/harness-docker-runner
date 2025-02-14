@@ -29,6 +29,9 @@ require (
 )
 
 require github.com/dchest/uniuri v0.0.0-20200228104902-7aecb25e1fe5
+replace (
+	github.com/harness/lite-engine v0.5.89 => ../lite-engine
+)
 
 require (
 	github.com/andybalholm/brotli v1.0.5 // indirect
