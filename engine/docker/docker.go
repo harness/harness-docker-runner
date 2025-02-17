@@ -13,6 +13,7 @@ import (
 	"io"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/harness/harness-docker-runner/engine/docker/image"
 	"github.com/harness/harness-docker-runner/engine/spec"
@@ -31,6 +32,11 @@ import (
 	"github.com/drone/runner-go/registry/auths"
 )
 
+const (
+	removing = "removing"
+	running  = "running"
+)
+
 // Opts configures the Docker engine.
 type Opts struct {
 	HidePull bool
@@ -41,7 +47,7 @@ type Docker struct {
 	client     client.APIClient
 	hidePull   bool
 	mu         sync.Mutex
-	containers []string
+	containers []Container
 }
 
 // New returns a new engine.
@@ -50,8 +56,13 @@ func New(client client.APIClient, opts Opts) *Docker {
 		client:     client,
 		hidePull:   opts.HidePull,
 		mu:         sync.Mutex{},
-		containers: make([]string, 0),
+		containers: make([]Container, 0),
 	}
+}
+
+type Container struct {
+	ID       string
+	SoftStop bool
 }
 
 // NewEnv returns a new Engine from the environment.
@@ -161,16 +172,20 @@ func (e *Docker) Destroy(ctx context.Context, pipelineConfig *spec.PipelineConfi
 	e.mu.Unlock()
 
 	// stop all containers
-	for _, ctrName := range containers {
-		if err := e.client.ContainerKill(ctx, ctrName, "9"); err != nil {
-			logrus.WithField("container", ctrName).WithField("error", err).Warnln("failed to kill container")
+	for _, ctr := range containers {
+		if ctr.SoftStop {
+			e.softStop(ctx, ctr.ID)
+		} else {
+			if err := e.client.ContainerKill(ctx, ctr.ID, "9"); err != nil {
+				logrus.WithField("container", ctr.ID).WithField("error", err).Warnln("failed to kill container")
+			}
 		}
 	}
 
 	// cleanup all containers
-	for _, ctrName := range containers {
-		if err := e.client.ContainerRemove(ctx, ctrName, removeOpts); err != nil {
-			logrus.WithField("container", ctrName).WithField("error", err).Warnln("failed to remove container")
+	for _, ctr := range containers {
+		if err := e.client.ContainerRemove(ctx, ctr.ID, removeOpts); err != nil {
+			logrus.WithField("container", ctr.ID).WithField("error", err).Warnln("failed to remove container")
 		}
 	}
 
@@ -337,7 +352,10 @@ func (e *Docker) create(ctx context.Context, pipelineConfig *spec.PipelineConfig
 	}
 
 	e.mu.Lock()
-	e.containers = append(e.containers, step.ID)
+	e.containers = append(e.containers, Container{
+		ID:       step.ID,
+		SoftStop: step.SoftStop,
+	})
 	e.mu.Unlock()
 
 	return nil
@@ -415,4 +433,35 @@ func (e *Docker) tail(ctx context.Context, id string, output io.Writer) error {
 		logs.Close()
 	}()
 	return nil
+}
+
+// softStop stops the container giving them a 30 seconds grace period. The signal sent by ContainerStop is SIGTERM.
+// After the grace period, the container is killed with SIGKILL.
+// After all the containers are stopped, they are removed only when the status is not "running" or "removing".
+func (e *Docker) softStop(ctx context.Context, name string) {
+	logrus.WithField("container", name).Infoln("starting soft stop")
+
+	timeout := 30 * time.Second
+	if err := e.client.ContainerStop(ctx, name, &timeout); err != nil {
+		logrus.WithField("container", name).WithField("error", err).Warnln("failed to stop the container")
+	}
+
+	// Before removing the container we want to be sure that it's in a healthy state to be removed.
+	now := time.Now()
+	for {
+		if time.Since(now) > timeout {
+			break
+		}
+		time.Sleep(1 * time.Second)
+		containerStatus, err := e.client.ContainerInspect(ctx, name)
+		if err != nil {
+			logrus.WithField("container", name).WithField("error", err).Warnln("failed to retrieve container stats")
+			continue
+		}
+		if containerStatus.State.Status == removing || containerStatus.State.Status == running {
+			continue
+		}
+		// everything has stopped
+		break
+	}
 }

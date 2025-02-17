@@ -56,6 +56,8 @@ type (
 		Volumes      []*VolumeMount    `json:"volumes,omitempty"`
 		Files        []*File           `json:"files,omitempty"`
 		WorkingDir   string            `json:"working_dir,omitempty"`
+		SoftStop     bool              `json:"soft_stop,omitempty"`
+		Kind         string            `json:"kind,omitempty"`
 	}
 
 	// Secret represents a secret variable.
