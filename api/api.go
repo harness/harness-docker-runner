@@ -126,6 +126,7 @@ type (
 		User         string               `json:"user,omitempty"`
 		Volumes      []*spec.VolumeMount  `json:"volumes,omitempty"`
 		Files        []*spec.File         `json:"files,omitempty"`
+		SoftStop     bool                 `json:"soft_stop,omitempty"`
 	}
 
 	OutputV2 struct {
