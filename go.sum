@@ -580,10 +580,14 @@ github.com/harness/lite-engine v0.5.78 h1:6EOIlW0djiJ7a9xgWppxu+FOUiXwZFYK59sbiR
 github.com/harness/lite-engine v0.5.78/go.mod h1:07w13fj/1efZZgY78xBo+iXuZH3BiVIx44cNZkHKPlc=
 github.com/harness/lite-engine v0.5.81 h1:TUF4EJlUnbfVLKu+y+pAELXhe9HHwMH4P53Ot6oPyYo=
 github.com/harness/lite-engine v0.5.81/go.mod h1:CwyhOnIA6XDt/U02eKUXwT0hIMK4Q9uKG9LM86j7qns=
-github.com/harness/lite-engine v0.5.89 h1:4FVnnGKJUDVVDSLDbeweGtmsnj1Ia/Wpywghs8uupnU=
-github.com/harness/lite-engine v0.5.89/go.mod h1:Wf7YWBRYKvUuS5l7GrWtW0h19vhWqZDfUu3BNDyKrE0=
+github.com/harness/lite-engine v0.5.95 h1:lvw+4OCtwEPLV+Kt9EllkqE/Q0NdJjfcS8IJTPkpXP4=
+github.com/harness/lite-engine v0.5.95/go.mod h1:/6AqaF3+ibpBG/vcPIzO4qQI8QaGFX1951qh1KxYZCk=
+github.com/harness/lite-engine v0.5.96 h1:97G+uVTvP2TECBsZFGwJLBsqxJ+v2XzPcBFMupd5r7o=
+github.com/harness/lite-engine v0.5.96/go.mod h1:/6AqaF3+ibpBG/vcPIzO4qQI8QaGFX1951qh1KxYZCk=
 github.com/harness/ti-client v0.0.0-20240617230757-1e90e7e3ada2 h1:9QHzlirx9Lg77ohXYTOeC+3aDPG8ZeHTKI1iAN5+cIo=
 github.com/harness/ti-client v0.0.0-20240617230757-1e90e7e3ada2/go.mod h1:/ow4f34mPgr5KPkzKxmBUB4cC09OjzStcLX6R8+43TI=
+github.com/harness/ti-client v0.0.0-20250211085345-7c82b29d1b3c h1:fAVNZiSrO9i8lQUo1joeEiOxHyqYwRxtVQivjrMeHpE=
+github.com/harness/ti-client v0.0.0-20250211085345-7c82b29d1b3c/go.mod h1:/ow4f34mPgr5KPkzKxmBUB4cC09OjzStcLX6R8+43TI=
 github.com/hashicorp/consul/api v1.1.0/go.mod h1:VmuI/Lkw1nC05EYQWNKwWGbkg+FbDBtguAZLlVdkD9Q=
 github.com/hashicorp/consul/sdk v0.1.1/go.mod h1:VKf9jXwCTEY1QZP2MOLRhb5i/I/ssyNV1vwHyQBF0x8=
 github.com/hashicorp/errwrap v0.0.0-20141028054710-7554cd9344ce/go.mod h1:YH+1FKiLXxHSkmPseP+kNlulaMuP3n2brvKWEqk/Jc4=

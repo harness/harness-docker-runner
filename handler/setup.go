@@ -240,6 +240,6 @@ func setProxyEnvs(environment map[string]string) {
 
 func getTiCfg(t api.TIConfig, dataDir string) tiCfg.Cfg {
 	cfg := tiCfg.New(t.URL, t.Token, t.AccountID, t.OrgID, t.ProjectID, t.PipelineID, t.BuildID, t.StageID, t.Repo,
-		t.Sha, t.CommitLink, t.SourceBranch, t.TargetBranch, t.CommitBranch, dataDir, t.ParseSavings, false)
+		t.Sha, t.CommitLink, t.SourceBranch, t.TargetBranch, t.CommitBranch, dataDir, t.ParseSavings, false, "", "")
 	return cfg
 }

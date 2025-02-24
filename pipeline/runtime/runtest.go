@@ -28,14 +28,15 @@ const (
 )
 
 func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.StartStepRequest, out io.Writer, tiConfig *tiCfg.Cfg) (
-	*runtime.State, map[string]string, []byte, []*api.OutputV2, string, error) {
+	*runtime.State, map[string]string, []byte, []*api.OutputV2, string, *types.TelemetryData, error) {
 	start := time.Now()
+	telemetry := &types.TelemetryData{}
 	log := logrus.New()
 	log.Out = out
 	optimizationState := types.DISABLED
-	cmd, err := instrumentation.GetCmd(ctx, &r.RunTest, r.Name, r.WorkingDir, log, r.Envs, tiConfig)
+	cmd, err := instrumentation.GetCmd(ctx, &r.RunTest, r.Name, r.WorkingDir, log, r.Envs, tiConfig, &telemetry.TestIntelligenceMetaData)
 	if err != nil {
-		return nil, nil, nil, nil, string(optimizationState), err
+		return nil, nil, nil, nil, string(optimizationState), telemetry, err
 	}
 
 	step := toStep(r)
@@ -43,7 +44,7 @@ func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.Start
 	step.Entrypoint = r.RunTest.Entrypoint
 
 	if (len(r.OutputVars) > 0 || len(r.Outputs) > 0) && len(step.Entrypoint) == 0 || len(step.Command) == 0 {
-		return nil, nil, nil, nil, string(optimizationState), fmt.Errorf("output variable should not be set for unset entrypoint or command")
+		return nil, nil, nil, nil, string(optimizationState), telemetry, fmt.Errorf("output variable should not be set for unset entrypoint or command")
 	}
 
 	enablePluginOutputSecrets := IsFeatureFlagEnabled(ciEnablePluginOutputSecrets, engine, step)
@@ -66,17 +67,18 @@ func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.Start
 
 	exited, err := engine.Run(ctx, step, out)
 	timeTakenMs := time.Since(start).Milliseconds()
-	if rerr := report.ParseAndUploadTests(ctx, r.TestReport, r.WorkingDir, step.Name, log, time.Now(), tiConfig, r.Envs); rerr != nil {
+	if _, rerr := report.ParseAndUploadTests(ctx, r.TestReport, r.WorkingDir, step.Name, log, time.Now(), tiConfig, &telemetry.TestIntelligenceMetaData, r.Envs); rerr != nil {
 		log.WithError(rerr).Errorln("failed to upload report")
 	}
 
-	if uerr := callgraph.Upload(ctx, step.Name, time.Since(start).Milliseconds(), log, time.Now(), tiConfig, cgDir); uerr != nil {
+	//Passing default false for failed test for now.
+	if uerr := callgraph.Upload(ctx, step.Name, time.Since(start).Milliseconds(), log, time.Now(), tiConfig, cgDir, false); uerr != nil {
 		log.WithError(uerr).Errorln("unable to collect callgraph")
 	}
 
 	// Parse and upload savings to TI
 	if tiConfig.GetParseSavings() {
-		optimizationState = savings.ParseAndUploadSavings(ctx, r.WorkingDir, log, step.Name, checkStepSuccess(exited, err), timeTakenMs, tiConfig, r.Envs)
+		optimizationState = savings.ParseAndUploadSavings(ctx, r.WorkingDir, log, step.Name, checkStepSuccess(exited, err), timeTakenMs, tiConfig, r.Envs, telemetry)
 	}
 
 	summaryOutputs := make(map[string]string)
@@ -117,7 +119,7 @@ func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.Start
 			if report.TestSummaryAsOutputEnabled(r.Envs) {
 				outputsV2 = append(outputsV2, summaryOutputsV2...)
 			}
-			return exited, outputs, artifact, outputsV2, string(optimizationState), outputErr
+			return exited, outputs, artifact, outputsV2, string(optimizationState), telemetry, outputErr
 		}
 		if len(summaryOutputsV2) > 0 && report.TestSummaryAsOutputEnabled(r.Envs) {
 			return exited, summaryOutputs, artifact, summaryOutputsV2, string(optimizationState), err
@@ -134,11 +136,11 @@ func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.Start
 					outputs[k] = v
 				}
 			}
-			return exited, outputs, artifact, nil, string(optimizationState), outputErr
+			return exited, outputs, artifact, nil, string(optimizationState), telemetry, outputErr
 		}
 		if len(summaryOutputs) != 0 && len(summaryOutputsV2) != 0 && report.TestSummaryAsOutputEnabled(r.Envs) {
 			// when step has failed return the actual error
-			return exited, summaryOutputs, artifact, summaryOutputsV2, string(optimizationState), err
+			return exited, summaryOutputs, artifact, summaryOutputsV2, string(optimizationState), telemetry, err
 		}
 	}
 
@@ -146,5 +148,5 @@ func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.Start
 		return exited, nil, artifact, nil, string(optimizationState), err
 	}
 
-	return exited, summaryOutputs, artifact, summaryOutputsV2, string(optimizationState), err
+	return exited, summaryOutputs, artifact, summaryOutputsV2, string(optimizationState), telemetry, err
 }
