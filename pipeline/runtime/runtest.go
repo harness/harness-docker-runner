@@ -122,7 +122,7 @@ func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.Start
 			return exited, outputs, artifact, outputsV2, string(optimizationState), telemetry, outputErr
 		}
 		if len(summaryOutputsV2) > 0 && report.TestSummaryAsOutputEnabled(r.Envs) {
-			return exited, summaryOutputs, artifact, summaryOutputsV2, string(optimizationState), err
+			return exited, summaryOutputs, artifact, summaryOutputsV2, string(optimizationState), telemetry, err
 		}
 	} else if len(r.OutputVars) > 0 {
 		if exited != nil && exited.Exited && exited.ExitCode == 0 {
@@ -145,7 +145,7 @@ func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.Start
 	}
 
 	if len(summaryOutputsV2) == 0 || !report.TestSummaryAsOutputEnabled(r.Envs) {
-		return exited, nil, artifact, nil, string(optimizationState), err
+		return exited, nil, artifact, nil, string(optimizationState), telemetry, err
 	}
 
 	return exited, summaryOutputs, artifact, summaryOutputsV2, string(optimizationState), telemetry, err
