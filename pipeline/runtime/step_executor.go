@@ -18,6 +18,7 @@ import (
 	"github.com/harness/harness-docker-runner/livelog"
 	"github.com/harness/harness-docker-runner/logstream"
 	tiCfg "github.com/harness/lite-engine/ti/config"
+	"github.com/harness/ti-client/types"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/sirupsen/logrus"
@@ -33,6 +34,7 @@ type StepStatus struct {
 	Artifact          []byte
 	OutputV2          []*api.OutputV2
 	OptimizationState string
+	Telemetry         *types.TelemetryData
 }
 
 const (
@@ -75,8 +77,8 @@ func (e *StepExecutor) StartStep(ctx context.Context, r *api.StartStepRequest, s
 	e.mu.Unlock()
 
 	go func() {
-		state, outputs, artifact, outputV2, optimizationState, stepErr := e.executeStep(r, secrets, client, tiConfig, logConfig)
-		status := StepStatus{Status: Complete, State: state, StepErr: stepErr, Outputs: outputs, Artifact: artifact, OutputV2: outputV2, OptimizationState: optimizationState}
+		state, outputs, artifact, outputV2, optimizationState, telemetry, stepErr := e.executeStep(r, secrets, client, tiConfig, logConfig)
+		status := StepStatus{Status: Complete, State: state, StepErr: stepErr, Outputs: outputs, Artifact: artifact, OutputV2: outputV2, OptimizationState: optimizationState, Telemetry: telemetry}
 		e.mu.Lock()
 		e.stepStatus[r.ID] = status
 		channels := e.stepWaitCh[r.ID]
@@ -200,7 +202,7 @@ func (e *StepExecutor) executeStepDrone(r *api.StartStepRequest, tiConfig *tiCfg
 
 		r.Kind = api.Run // only this kind is supported
 
-		exited, _, _, _, _, err := e.run(ctx, e.engine, r, stepLog, tiConfig)
+		exited, _, _, _, _, _, err := e.run(ctx, e.engine, r, stepLog, tiConfig)
 		if ctx.Err() == context.Canceled || ctx.Err() == context.DeadlineExceeded {
 			logr.WithError(err).Warnln("step execution canceled")
 			return nil, ctx.Err()
@@ -231,10 +233,10 @@ func (e *StepExecutor) executeStepDrone(r *api.StartStepRequest, tiConfig *tiCfg
 	return runStep()
 }
 
-func (e *StepExecutor) executeStep(r *api.StartStepRequest, secrets []string, client logstream.Client, tiConfig *tiCfg.Cfg, logConfig *api.LogConfig) (*runtime.State, map[string]string, []byte, []*api.OutputV2, string, error) {
+func (e *StepExecutor) executeStep(r *api.StartStepRequest, secrets []string, client logstream.Client, tiConfig *tiCfg.Cfg, logConfig *api.LogConfig) (*runtime.State, map[string]string, []byte, []*api.OutputV2, string, *types.TelemetryData, error) {
 	if r.LogDrone {
 		state, err := e.executeStepDrone(r, tiConfig)
-		return state, nil, nil, nil, "", err
+		return state, nil, nil, nil, "", nil, err
 	}
 
 	wc := livelog.New(client, r.LogKey, r.Name, getNudges(), logConfig.TrimNewLineSuffix)
@@ -257,7 +259,7 @@ func (e *StepExecutor) executeStep(r *api.StartStepRequest, secrets []string, cl
 			e.run(ctx, e.engine, r, wr, tiConfig) // nolint:errcheck
 			wc.Close()
 		}()
-		return &runtime.State{Exited: false}, nil, nil, nil, "", nil
+		return &runtime.State{Exited: false}, nil, nil, nil, "", nil, nil
 	}
 
 	var result error
@@ -269,7 +271,7 @@ func (e *StepExecutor) executeStep(r *api.StartStepRequest, secrets []string, cl
 		defer cancel()
 	}
 
-	exited, outputs, artifact, outputV2, optimizationState, err := e.run(ctx, e.engine, r, wr, tiConfig)
+	exited, outputs, artifact, outputV2, optimizationState, telemetry, err := e.run(ctx, e.engine, r, wr, tiConfig)
 	if err != nil {
 		result = multierror.Append(result, err)
 	}
@@ -284,7 +286,7 @@ func (e *StepExecutor) executeStep(r *api.StartStepRequest, secrets []string, cl
 	// DeadlineExceeded error this indicates the step was timed out.
 	switch ctx.Err() {
 	case context.Canceled, context.DeadlineExceeded:
-		return nil, nil, nil, nil, "", ctx.Err()
+		return nil, nil, nil, nil, "", telemetry, ctx.Err()
 	}
 
 	if exited != nil {
@@ -300,11 +302,11 @@ func (e *StepExecutor) executeStep(r *api.StartStepRequest, secrets []string, cl
 			logrus.WithField("id", r.ID).Infof("received exit code %d\n", exited.ExitCode)
 		}
 	}
-	return exited, outputs, artifact, outputV2, optimizationState, result
+	return exited, outputs, artifact, outputV2, optimizationState, telemetry, result
 }
 
 func (e *StepExecutor) run(ctx context.Context, engine *engine.Engine, r *api.StartStepRequest, out io.Writer, tiConfig *tiCfg.Cfg) (
-	*runtime.State, map[string]string, []byte, []*api.OutputV2, string, error) {
+	*runtime.State, map[string]string, []byte, []*api.OutputV2, string, *types.TelemetryData, error) {
 	if r.Kind == api.Run {
 		return executeRunStep(ctx, engine, r, out, tiConfig)
 	}
@@ -321,6 +323,7 @@ func convertStatus(status StepStatus) *api.PollStepResponse {
 		Artifact:          status.Artifact,
 		OutputV2:          status.OutputV2,
 		OptimizationState: status.OptimizationState,
+		Telemetry:         status.Telemetry,
 	}
 
 	stepErr := status.StepErr

@@ -30,16 +30,17 @@ const (
 )
 
 func executeRunTestsV2Step(ctx context.Context, engine *engine.Engine, r *api.StartStepRequest, out io.Writer, tiConfig *tiCfg.Cfg) (
-	*runtime.State, map[string]string, []byte, []*api.OutputV2, string, error) {
+	*runtime.State, map[string]string, []byte, []*api.OutputV2, string, *types.TelemetryData, error) {
 	start := time.Now()
+	telemetry := &types.TelemetryData{}
 	log := logrus.New()
 	log.Out = out
 	step := toStep(r)
 	optimizationState := types.DISABLED
 	step.Entrypoint = r.RunTestsV2.Entrypoint
-	preCmd, err := leRuntime.SetupRunTestV2(ctx, &r.RunTestsV2, step.Name, r.WorkingDir, log, r.Envs, tiConfig)
+	preCmd, err := leRuntime.SetupRunTestV2(ctx, &r.RunTestsV2, step.Name, r.WorkingDir, log, r.Envs, tiConfig, &telemetry.TestIntelligenceMetaData)
 	if err != nil {
-		return nil, nil, nil, nil, string(optimizationState), err
+		return nil, nil, nil, nil, string(optimizationState), telemetry, err
 	}
 	command := r.RunTestsV2.Command[0]
 	if preCmd != "" {
@@ -48,7 +49,7 @@ func executeRunTestsV2Step(ctx context.Context, engine *engine.Engine, r *api.St
 	step.Command = []string{command}
 
 	if (len(r.OutputVars) > 0 || len(r.Outputs) > 0) && (len(step.Entrypoint) == 0 || len(step.Command) == 0) {
-		return nil, nil, nil, nil, string(optimizationState), fmt.Errorf("output variable should not be set for unset entrypoint or command")
+		return nil, nil, nil, nil, string(optimizationState), telemetry, fmt.Errorf("output variable should not be set for unset entrypoint or command")
 	}
 
 	enablePluginOutputSecrets := IsFeatureFlagEnabled(ciEnablePluginOutputSecrets, engine, step)
@@ -87,17 +88,18 @@ func executeRunTestsV2Step(ctx context.Context, engine *engine.Engine, r *api.St
 		// If there are no paths specified, set Paths[0] to include all XML files and all TRX files
 		r.TestReport.Junit.Paths = []string{"**/*.xml", "**/*.trx"}
 	}
-	if rerr := report.ParseAndUploadTests(ctx, r.TestReport, r.WorkingDir, step.Name, log, time.Now(), tiConfig, r.Envs); rerr != nil {
+	if _, rerr := report.ParseAndUploadTests(ctx, r.TestReport, r.WorkingDir, step.Name, log, time.Now(), tiConfig, &telemetry.TestIntelligenceMetaData, r.Envs); rerr != nil {
 		log.WithError(rerr).Errorln("failed to upload report")
 	}
 
-	if uerr := callgraph.Upload(ctx, step.Name, time.Since(start).Milliseconds(), log, time.Now(), tiConfig, outDir); uerr != nil {
+	//Passing default false for failed test for now
+	if uerr := callgraph.Upload(ctx, step.Name, time.Since(start).Milliseconds(), log, time.Now(), tiConfig, outDir, false); uerr != nil {
 		log.WithError(uerr).Errorln("unable to collect callgraph")
 	}
 
 	// Parse and upload savings to TI
 	if tiConfig.GetParseSavings() {
-		optimizationState = savings.ParseAndUploadSavings(ctx, r.WorkingDir, log, step.Name, checkStepSuccess(exited, err), timeTakenMs, tiConfig, r.Envs)
+		optimizationState = savings.ParseAndUploadSavings(ctx, r.WorkingDir, log, step.Name, checkStepSuccess(exited, err), timeTakenMs, tiConfig, r.Envs, telemetry)
 	}
 
 	artifact, _ := fetchArtifactDataFromArtifactFile(artifactFile, out)
@@ -170,12 +172,12 @@ func executeRunTestsV2Step(ctx context.Context, engine *engine.Engine, r *api.St
 				outputsV2 = append(outputsV2, summaryOutputsV2...)
 			}
 
-			return exited, outputs, artifact, outputsV2, string(optimizationState), finalErr
+			return exited, outputs, artifact, outputsV2, string(optimizationState), telemetry, finalErr
 
 		} else {
 			outputs, err := fetchOutputVariables(outputFile, out, false) // nolint:govet
 			if err != nil {
-				return exited, nil, nil, nil, string(optimizationState), err
+				return nil, nil, nil, nil, string(optimizationState), telemetry, err
 			}
 			// Delete output variable file
 			if ferr := os.Remove(outputFile); ferr != nil {
@@ -195,22 +197,22 @@ func executeRunTestsV2Step(ctx context.Context, engine *engine.Engine, r *api.St
 				if report.TestSummaryAsOutputEnabled(r.Envs) {
 					outputsV2 = append(outputsV2, summaryOutputsV2...)
 				}
-				return exited, outputs, artifact, outputsV2, string(optimizationState), err
+				return exited, outputs, artifact, outputsV2, string(optimizationState), telemetry, err
 			} else if len(r.OutputVars) > 0 {
 				// only return err when output vars are expected
 				if report.TestSummaryAsOutputEnabled(r.Envs) {
-					return exited, summaryOutputs, artifact, summaryOutputsV2, string(optimizationState), err
+					return exited, summaryOutputs, artifact, summaryOutputsV2, string(optimizationState), telemetry, err
 				}
-				return exited, outputs, artifact, nil, string(optimizationState), err
+				return exited, outputs, artifact, nil, string(optimizationState), telemetry, err
 			}
 			if len(summaryOutputsV2) != 0 && report.TestSummaryAsOutputEnabled(r.Envs) {
-				return exited, outputs, artifact, summaryOutputsV2, string(optimizationState), nil
+				return exited, outputs, artifact, summaryOutputsV2, string(optimizationState), telemetry, nil
 			}
-			return exited, outputs, artifact, nil, string(optimizationState), nil
+			return exited, outputs, artifact, nil, string(optimizationState), telemetry, nil
 		}
 	}
 	if len(summaryOutputsV2) != 0 && report.TestSummaryAsOutputEnabled(r.Envs) {
-		return exited, summaryOutputs, artifact, summaryOutputsV2, string(optimizationState), err
+		return exited, summaryOutputs, artifact, summaryOutputsV2, string(optimizationState), telemetry, err
 	}
-	return exited, nil, artifact, nil, string(optimizationState), err
+	return exited, nil, artifact, nil, string(optimizationState), telemetry, err
 }
