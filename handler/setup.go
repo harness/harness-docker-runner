@@ -91,7 +91,7 @@ func HandleSetup(config *config.Config) http.HandlerFunc {
 		logger.FromRequest(r).Traceln("starting the setup process")
 
 		if s.MountDockerSocket == nil || *s.MountDockerSocket { // required to support m1 where docker isn't installed.
-			s.Volumes = append(s.Volumes, getDockerSockVolume())
+			s.Volumes = append(s.Volumes, getDockerSockVolume(config))
 		}
 
 		// fmt.Printf("setup request config: %+v\n", s.SetupRequestConfig)
@@ -189,8 +189,8 @@ func sanitize(r string) string {
 	return strings.ReplaceAll(r, "[-_]", "")
 }
 
-func getDockerSockVolume() *spec.Volume {
-	path := config.GetConfig().Docker.Socket
+func getDockerSockVolume(config *config.Config) *spec.Volume {
+	path := config.Docker.Socket
 	if path == "" {
 		path = engine.DockerSockUnixPath
 		if runtime.GOOS == "windows" {
