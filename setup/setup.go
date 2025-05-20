@@ -5,6 +5,7 @@
 package setup
 
 import (
+	"github.com/harness/harness-docker-runner/config"
 	"os"
 	"os/exec"
 	"runtime"
@@ -54,7 +55,11 @@ func DockerInstalled(instanceInfo InstanceInfo) (installed bool) {
 	case windowsString:
 		logrus.Infoln("windows: we should check docker installation here")
 	case osxString:
-		cmd := exec.Command("/usr/local/bin/docker", "ps")
+		binPath := config.GetConfig().Docker.Binary
+		if binPath == "" {
+			binPath = "/usr/local/bin/docker"
+		}
+		cmd := exec.Command(binPath, "ps")
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		err := cmd.Run()

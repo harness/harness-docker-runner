@@ -190,9 +190,12 @@ func sanitize(r string) string {
 }
 
 func getDockerSockVolume() *spec.Volume {
-	path := engine.DockerSockUnixPath
-	if runtime.GOOS == "windows" {
-		path = engine.DockerSockWinPath
+	path := config.GetConfig().Docker.Socket
+	if path == "" {
+		path = engine.DockerSockUnixPath
+		if runtime.GOOS == "windows" {
+			path = engine.DockerSockWinPath
+		}
 	}
 	return &spec.Volume{
 		HostPath: &spec.VolumeHostPath{

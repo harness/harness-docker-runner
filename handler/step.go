@@ -206,9 +206,12 @@ func updateDelegateCapacity(s *api.StartStepRequestConfig) {
 }
 
 func getDockerSockVolumeMount() *spec.VolumeMount {
-	path := engine.DockerSockUnixPath
-	if runtime.GOOS == "windows" {
-		path = engine.DockerSockWinPath
+	path := config.GetConfig().Docker.Socket
+	if path == "" {
+		path = engine.DockerSockUnixPath
+		if runtime.GOOS == "windows" {
+			path = engine.DockerSockWinPath
+		}
 	}
 	return &spec.VolumeMount{
 		Name: engine.DockerSockVolName,
