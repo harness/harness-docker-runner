@@ -5,6 +5,7 @@
 package setup
 
 import (
+	"github.com/harness/harness-docker-runner/config"
 	"os"
 	"os/exec"
 	"runtime"
@@ -21,12 +22,12 @@ func GetInstanceInfo() InstanceInfo {
 	return InstanceInfo{osType: osType}
 }
 
-func PrepareSystem() {
+func PrepareSystem(config *config.Config) {
 	instanceInfo := GetInstanceInfo()
 	if !GitInstalled(instanceInfo) {
 		installGit(instanceInfo)
 	}
-	if !DockerInstalled(instanceInfo) {
+	if !DockerInstalled(instanceInfo, config) {
 		installDocker(instanceInfo)
 	}
 }
@@ -48,13 +49,17 @@ func GitInstalled(instanceInfo InstanceInfo) (installed bool) {
 	return true
 }
 
-func DockerInstalled(instanceInfo InstanceInfo) (installed bool) {
+func DockerInstalled(instanceInfo InstanceInfo, config *config.Config) (installed bool) {
 	logrus.Infoln("checking docker is installed")
 	switch instanceInfo.osType {
 	case windowsString:
 		logrus.Infoln("windows: we should check docker installation here")
 	case osxString:
-		cmd := exec.Command("/usr/local/bin/docker", "ps")
+		binPath := config.Docker.Binary
+		if binPath == "" {
+			binPath = "/usr/local/bin/docker"
+		}
+		cmd := exec.Command(binPath, "ps")
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		err := cmd.Run()

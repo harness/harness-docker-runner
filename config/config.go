@@ -19,6 +19,11 @@ type Config struct {
 		NetworkDriver string   `envconfig:"NETWORK_DRIVER"`
 	}
 
+	Docker struct {
+		Binary string `envconfig:"DOCKER_BIN" default:""`
+		Socket string `envconfig:"DOCKER_SOCKET" default:""`
+	}
+
 	Server struct {
 		Bind              string `envconfig:"HTTPS_BIND" default:":3000"`
 		CertFile          string `envconfig:"SERVER_CERT_FILE" default:"/tmp/certs/server-cert.pem"` // Server certificate PEM file

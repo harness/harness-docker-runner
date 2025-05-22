@@ -39,7 +39,7 @@ func HandleStartStep(config *config.Config) http.HandlerFunc {
 		}
 
 		if s.MountDockerSocket == nil || *s.MountDockerSocket { // required to support m1 where docker isn't installed.
-			s.Volumes = append(s.Volumes, getDockerSockVolumeMount())
+			s.Volumes = append(s.Volumes, getDockerSockVolumeMount(config))
 		}
 		ex := executor.GetExecutor()
 		stageData, err := ex.Get(s.StageRuntimeID)
@@ -205,10 +205,13 @@ func updateDelegateCapacity(s *api.StartStepRequestConfig) {
 	}
 }
 
-func getDockerSockVolumeMount() *spec.VolumeMount {
-	path := engine.DockerSockUnixPath
-	if runtime.GOOS == "windows" {
-		path = engine.DockerSockWinPath
+func getDockerSockVolumeMount(config *config.Config) *spec.VolumeMount {
+	path := config.Docker.Socket
+	if path == "" {
+		path = engine.DockerSockUnixPath
+		if runtime.GOOS == "windows" {
+			path = engine.DockerSockWinPath
+		}
 	}
 	return &spec.VolumeMount{
 		Name: engine.DockerSockVolName,

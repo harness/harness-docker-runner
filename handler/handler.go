@@ -52,7 +52,7 @@ func Handler(config *config.Config, engine *engine.Engine, stepExecutor *runtime
 	// Health check
 	r.Mount("/healthz", func() http.Handler {
 		sr := chi.NewRouter()
-		sr.Get("/", HandleHealth())
+		sr.Get("/", HandleHealth(config))
 		return sr
 	}())
 
