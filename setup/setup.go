@@ -22,12 +22,12 @@ func GetInstanceInfo() InstanceInfo {
 	return InstanceInfo{osType: osType}
 }
 
-func PrepareSystem() {
+func PrepareSystem(config *config.Config) {
 	instanceInfo := GetInstanceInfo()
 	if !GitInstalled(instanceInfo) {
 		installGit(instanceInfo)
 	}
-	if !DockerInstalled(instanceInfo) {
+	if !DockerInstalled(instanceInfo, config) {
 		installDocker(instanceInfo)
 	}
 }
@@ -49,13 +49,13 @@ func GitInstalled(instanceInfo InstanceInfo) (installed bool) {
 	return true
 }
 
-func DockerInstalled(instanceInfo InstanceInfo) (installed bool) {
+func DockerInstalled(instanceInfo InstanceInfo, config *config.Config) (installed bool) {
 	logrus.Infoln("checking docker is installed")
 	switch instanceInfo.osType {
 	case windowsString:
 		logrus.Infoln("windows: we should check docker installation here")
 	case osxString:
-		binPath := config.GetConfig().Docker.Binary
+		binPath := config.Docker.Binary
 		if binPath == "" {
 			binPath = "/usr/local/bin/docker"
 		}
