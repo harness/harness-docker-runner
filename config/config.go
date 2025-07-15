@@ -26,6 +26,8 @@ type Config struct {
 		CACertFile        string `envconfig:"CLIENT_CERT_FILE" default:"/tmp/certs/ca-cert.pem"`     // CA certificate file
 		SkipPrepareServer bool   `envconfig:"SKIP_PREPARE_SERVER" default:"false"`                   // skip prepare server, install docker / git
 		Insecure          bool   `envconfig:"SERVER_INSECURE" default:"true"`                        // run in insecure mode
+		PluginBinaryURI   string `envconfig:"PLUGIN_BINARY_URI" default:"https://github.com/drone/plugin/releases/download/v3.9.4-beta"`
+		EnvmanBinaryURI   string `envconfig:"ENVMAN_BINARY_URI" default:"https://github.com/bitrise-io/envman/releases/download/2.4.2"`
 	}
 
 	Client struct {
