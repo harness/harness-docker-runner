@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/drone/runner-go/pipeline/runtime"
@@ -17,6 +18,7 @@ import (
 
 	"github.com/harness/harness-docker-runner/api"
 	"github.com/harness/harness-docker-runner/engine"
+	"github.com/harness/harness-docker-runner/engine/spec"
 	"github.com/harness/harness-docker-runner/pipeline"
 	tiCfg "github.com/harness/lite-engine/ti/config"
 	"github.com/harness/lite-engine/ti/report"
@@ -63,7 +65,10 @@ func executeRunStep(ctx context.Context, engine *engine.Engine, r *api.StartStep
 	log := logrus.New()
 	log.Out = out
 
-	logrus.WithField("step_id", r.ID).WithField("stage_id", r.StageRuntimeID).Traceln("starting step run")
+	logrus.WithField("step_id", r.ID).WithField("stage_id", r.StageRuntimeID).Infoln("starting step run")
+
+	// Log the command being executed
+	printCommand(step, out)
 
 	artifactFile := fmt.Sprintf("%s/%s-artifact", pipeline.SharedVolPath, step.ID)
 	step.Envs["PLUGIN_ARTIFACT_FILE"] = artifactFile
@@ -220,4 +225,38 @@ func parseBuildInfo(telemetryData *types.TelemetryData, buildFile string) error 
 
 	telemetryData.BuildInfo = buildInfo
 	return nil
+}
+
+// printCommand logs the command being executed to the output
+func printCommand(step *spec.Step, output io.Writer) {
+
+	if step == nil {
+		return
+	}
+
+	var actualCommand string
+
+	if len(step.Command) > 0 {
+		actualCommand = step.Command[0]
+	} else if len(step.Entrypoint) > 2 && step.Entrypoint[0] == "sh" && step.Entrypoint[1] == "-c" {
+		actualCommand = step.Entrypoint[2]
+	} else if len(step.Entrypoint) > 0 {
+		actualCommand = strings.Join(step.Entrypoint, " ")
+	}
+
+	if actualCommand != "" {
+
+		boldYellow := "\033[1;33m" // ANSI bold yellow
+		reset := "\033[0m"         // ANSI reset
+
+		header := fmt.Sprintf("%sExecuting the following command(s):%s\n", boldYellow, reset)
+		output.Write([]byte(header))
+
+		lines := strings.Split(actualCommand, "\n")
+		for _, line := range lines {
+			// Format each line with bold yellow and reset
+			formattedLine := fmt.Sprintf("%s%s%s\n", boldYellow, line, reset)
+			output.Write([]byte(formattedLine))
+		}
+	}
 }

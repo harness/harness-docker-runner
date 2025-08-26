@@ -80,6 +80,9 @@ func executeRunTestsV2Step(ctx context.Context, engine *engine.Engine, r *api.St
 	artifactFile := fmt.Sprintf("%s/%s-artifact", pipeline.SharedVolPath, step.ID)
 	step.Envs["PLUGIN_ARTIFACT_FILE"] = artifactFile
 
+	// Log the command being executed
+	printCommand(step, out)
+
 	exited, err := engine.Run(ctx, step, out)
 	timeTakenMs := time.Since(start).Milliseconds()
 	logrus.WithField("step_id", r.ID).WithField("stage_id", r.StageRuntimeID).Traceln("completed step runtestv2")
