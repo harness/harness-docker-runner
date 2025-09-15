@@ -65,6 +65,9 @@ func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.Start
 	artifactFile := fmt.Sprintf("%s/%s-artifact", pipeline.SharedVolPath, step.ID)
 	step.Envs["PLUGIN_ARTIFACT_FILE"] = artifactFile
 
+	// Log the command being executed
+	printCommand(step, out)
+
 	exited, err := engine.Run(ctx, step, out)
 	timeTakenMs := time.Since(start).Milliseconds()
 	if _, rerr := report.ParseAndUploadTests(ctx, r.TestReport, r.WorkingDir, step.Name, log, time.Now(), tiConfig, &telemetry.TestIntelligenceMetaData, r.Envs); rerr != nil {

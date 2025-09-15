@@ -1,11 +1,160 @@
 package runtime
 
 import (
+	"bytes"
 	"os"
+	"regexp"
 	"testing"
 
+	"github.com/harness/harness-docker-runner/engine/spec"
+	"github.com/harness/harness-docker-runner/logstream"
 	"github.com/stretchr/testify/assert"
 )
+
+// Helper function to strip ANSI color codes
+func stripAnsiCodes(s string) string {
+	ansi := regexp.MustCompile("\033\\[[0-9;]*m")
+	return ansi.ReplaceAllString(s, "")
+}
+
+// testWriter implements the logstream.Writer interface for testing
+type testWriter struct {
+	buf *bytes.Buffer
+}
+
+func (w *testWriter) Write(p []byte) (n int, err error) {
+	return w.buf.Write(p)
+}
+
+func (w *testWriter) Open() error {
+	return nil
+}
+
+func (w *testWriter) Close() error {
+	return nil
+}
+
+func (w *testWriter) Start() {
+
+}
+
+func (w *testWriter) Error() error {
+	return nil
+}
+
+func TestPrintCommand(t *testing.T) {
+	tests := []struct {
+		name           string
+		step           *spec.Step
+		expectedOutput []string
+	}{
+		{
+			name: "command from Command field",
+			step: &spec.Step{
+				Name:    "test-step",
+				Command: []string{"echo 'hello world'"},
+			},
+			expectedOutput: []string{
+				"Executing the following command(s):",
+				"echo 'hello world'",
+			},
+		},
+		{
+			name: "command from sh -c entrypoint",
+			step: &spec.Step{
+				Name:       "test-step",
+				Entrypoint: []string{"sh", "-c", "echo 'hello'; echo 'world'"},
+			},
+			expectedOutput: []string{
+				"Executing the following command(s):",
+				"echo 'hello'; echo 'world'",
+			},
+		},
+		{
+			name: "command from regular entrypoint",
+			step: &spec.Step{
+				Name:       "test-step",
+				Entrypoint: []string{"node", "script.js", "--verbose"},
+			},
+			expectedOutput: []string{
+				"Executing the following command(s):",
+				"node script.js --verbose",
+			},
+		},
+		{
+			name: "multi-line command",
+			step: &spec.Step{
+				Name:    "test-step",
+				Command: []string{"echo 'Line 1'\necho 'Line 2'\necho 'Line 3'"},
+			},
+			expectedOutput: []string{
+				"Executing the following command(s):",
+				"echo 'Line 1'",
+				"echo 'Line 2'",
+				"echo 'Line 3'",
+			},
+		},
+		{
+			name:           "nil step",
+			step:           nil,
+			expectedOutput: []string{},
+		},
+		{
+			name: "empty command and entrypoint",
+			step: &spec.Step{
+				Name:       "test-step",
+				Command:    []string{},
+				Entrypoint: []string{},
+			},
+			expectedOutput: []string{},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			buf := new(bytes.Buffer)
+			printCommand(tc.step, buf)
+
+			output := buf.String()
+
+			// Strip ANSI color codes for easier comparison
+			output = stripAnsiCodes(output)
+
+			for _, expected := range tc.expectedOutput {
+				assert.Contains(t, output, expected, "Expected output to contain %q", expected)
+			}
+
+			if len(tc.expectedOutput) == 0 {
+				assert.Empty(t, output, "Expected no output for %s", tc.name)
+			}
+		})
+	}
+}
+
+func TestPrintCommandWithSecrets(t *testing.T) {
+	// Setup step with secret in command
+	step := &spec.Step{
+		Name:    "secret-step",
+		Command: []string{"curl -H 'Authorization: Bearer abcdeedcba' https://api.example.com"},
+	}
+
+	rawBuf := new(bytes.Buffer)
+	secrets := []string{"abcdeedcba"}
+	replacerWriter := logstream.NewReplacer(
+		&testWriter{buf: rawBuf},
+		secrets,
+	)
+
+	printCommand(step, replacerWriter)
+
+	output := stripAnsiCodes(rawBuf.String())
+
+	assert.Contains(t, output, "Executing the following command(s):")
+
+	assert.Contains(t, output, "curl -H 'Authorization: Bearer **************' https://api.example.com")
+
+	assert.NotContains(t, output, "abcdeedcba")
+}
 
 func TestFetchExportedVars(t *testing.T) {
 	tests := []struct {

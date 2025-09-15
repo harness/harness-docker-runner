@@ -63,7 +63,10 @@ func executeRunStep(ctx context.Context, engine *engine.Engine, r *api.StartStep
 	log := logrus.New()
 	log.Out = out
 
-	logrus.WithField("step_id", r.ID).WithField("stage_id", r.StageRuntimeID).Traceln("starting step run")
+	logrus.WithField("step_id", r.ID).WithField("stage_id", r.StageRuntimeID).Infoln("starting step run")
+
+	// Log the command being executed
+	printCommand(step, out)
 
 	artifactFile := fmt.Sprintf("%s/%s-artifact", pipeline.SharedVolPath, step.ID)
 	step.Envs["PLUGIN_ARTIFACT_FILE"] = artifactFile
