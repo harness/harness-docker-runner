@@ -51,9 +51,9 @@ func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.Start
 
 	var outputFile string
 	if enablePluginOutputSecrets {
-		outputFile = fmt.Sprintf("%s/%s-output.env", pipeline.SharedVolPath, step.ID)
+		outputFile = fmt.Sprintf("%s/%s-output.env", pipeline.GetSharedVolPath(), step.ID)
 	} else {
-		outputFile = fmt.Sprintf("%s/%s.out", pipeline.SharedVolPath, step.ID)
+		outputFile = fmt.Sprintf("%s/%s.out", pipeline.GetSharedVolPath(), step.ID)
 	}
 
 	if len(r.Outputs) > 0 {
@@ -62,7 +62,7 @@ func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.Start
 		step.Command[0] += getOutputVarCmd(step.Entrypoint, r.OutputVars, outputFile, enablePluginOutputSecrets)
 	}
 
-	artifactFile := fmt.Sprintf("%s/%s-artifact", pipeline.SharedVolPath, step.ID)
+	artifactFile := fmt.Sprintf("%s/%s-artifact", pipeline.GetSharedVolPath(), step.ID)
 	step.Envs["PLUGIN_ARTIFACT_FILE"] = artifactFile
 
 	exited, err := engine.Run(ctx, step, out)

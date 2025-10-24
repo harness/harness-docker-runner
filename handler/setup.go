@@ -20,6 +20,7 @@ import (
 	"github.com/harness/harness-docker-runner/engine/docker"
 	"github.com/harness/harness-docker-runner/engine/spec"
 	"github.com/harness/harness-docker-runner/executor"
+	"github.com/harness/harness-docker-runner/internal/paths"
 	"github.com/harness/harness-docker-runner/livelog"
 	"github.com/harness/harness-docker-runner/logger"
 	"github.com/harness/harness-docker-runner/pipeline"
@@ -156,9 +157,15 @@ func updateVolumes(r api.SetupRequest) {
 			if v.HostPath.ID == "harness" {
 				v.HostPath.Create = true
 				v.HostPath.Remove = true
-				v.HostPath.Path = v.HostPath.Path + "-" + sanitize(r.ID)
+				v.HostPath.Path = paths.ResolveHostPath(v.HostPath.Path + "-" + sanitize(r.ID))
+			}
+			if v.HostPath.ID == "addon" {
+				v.HostPath.Create = true
+				v.HostPath.Remove = true
+				v.HostPath.Path = paths.ResolveHostPath(v.HostPath.Path)
 			}
 		}
+
 	}
 }
 
@@ -166,7 +173,7 @@ func getSharedVolume() *spec.Volume {
 	return &spec.Volume{
 		HostPath: &spec.VolumeHostPath{
 			Name: pipeline.SharedVolName,
-			Path: pipeline.SharedVolPath,
+			Path: pipeline.GetSharedVolPath(),
 			ID:   "engine",
 		},
 	}
@@ -174,7 +181,7 @@ func getSharedVolume() *spec.Volume {
 
 // getTiVolume returns a volume (directory) which is used to store TI related data
 func getTiVolume(setupID string) *spec.Volume {
-	tiDir := fmt.Sprintf("%s-%s", ti.VolumePath, sanitize(setupID))
+	tiDir := fmt.Sprintf("%s-%s", ti.GetVolumePath(), sanitize(setupID))
 	return &spec.Volume{
 		HostPath: &spec.VolumeHostPath{
 			Name:   ti.VolumeName,
