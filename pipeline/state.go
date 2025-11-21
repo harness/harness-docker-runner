@@ -7,6 +7,7 @@ package pipeline
 import (
 	"github.com/harness/harness-docker-runner/api"
 	"github.com/harness/harness-docker-runner/engine/spec"
+	"github.com/harness/harness-docker-runner/internal/paths"
 	"github.com/harness/harness-docker-runner/logstream"
 	"github.com/harness/harness-docker-runner/logstream/filestore"
 	"github.com/harness/harness-docker-runner/logstream/remote"
@@ -17,6 +18,10 @@ const (
 	SharedVolPath = "/tmp/engine"
 	SharedVolName = "_engine"
 )
+
+func GetSharedVolPath() string {
+	return paths.GetSharedVolPath()
+}
 
 // State stores the pipeline state.
 type State struct {
@@ -63,7 +68,7 @@ func (s *State) GetLogStreamClient() logstream.Client {
 			s.logClient = remote.NewHTTPClient(s.logConfig.URL, s.logConfig.AccountID,
 				s.logConfig.Token, s.logConfig.IndirectUpload, false)
 		} else {
-			s.logClient = filestore.New(SharedVolPath)
+			s.logClient = filestore.New(GetSharedVolPath())
 		}
 	}
 	return s.logClient

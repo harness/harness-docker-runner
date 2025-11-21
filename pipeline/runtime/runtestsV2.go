@@ -59,13 +59,13 @@ func executeRunTestsV2Step(ctx context.Context, engine *engine.Engine, r *api.St
 	var outputSecretsFile string
 
 	if enablePluginOutputSecrets {
-		outputFile = fmt.Sprintf("%s/%s-output.env", pipeline.SharedVolPath, step.ID)
+		outputFile = fmt.Sprintf("%s/%s-output.env", pipeline.GetSharedVolPath(), step.ID)
 		step.Envs["DRONE_OUTPUT"] = outputFile
 
-		outputSecretsFile = fmt.Sprintf("%s/%s-output-secrets.env", pipeline.SharedVolPath, step.ID)
+		outputSecretsFile = fmt.Sprintf("%s/%s-output-secrets.env", pipeline.GetSharedVolPath(), step.ID)
 		step.Envs["HARNESS_OUTPUT_SECRET_FILE"] = outputSecretsFile
 	} else {
-		outputFile = fmt.Sprintf("%s/%s.out", pipeline.SharedVolPath, step.ID)
+		outputFile = fmt.Sprintf("%s/%s.out", pipeline.GetSharedVolPath(), step.ID)
 		step.Envs["DRONE_OUTPUT"] = outputFile
 	}
 
@@ -77,7 +77,7 @@ func executeRunTestsV2Step(ctx context.Context, engine *engine.Engine, r *api.St
 
 	logrus.WithField("step_id", r.ID).WithField("stage_id", r.StageRuntimeID).Traceln("starting step run")
 
-	artifactFile := fmt.Sprintf("%s/%s-artifact", pipeline.SharedVolPath, step.ID)
+	artifactFile := fmt.Sprintf("%s/%s-artifact", pipeline.GetSharedVolPath(), step.ID)
 	step.Envs["PLUGIN_ARTIFACT_FILE"] = artifactFile
 
 	// Log the command being executed

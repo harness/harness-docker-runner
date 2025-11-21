@@ -4,7 +4,14 @@
 
 package ti
 
+import "github.com/harness/harness-docker-runner/internal/paths"
+
 const (
 	VolumeName = "ti"
 	VolumePath = "/tmp/ti"
 )
+
+// VolumePath returns the TI volume path
+func GetVolumePath() string {
+	return paths.GetTIVolPath()
+}

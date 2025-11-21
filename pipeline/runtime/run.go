@@ -44,13 +44,13 @@ func executeRunStep(ctx context.Context, engine *engine.Engine, r *api.StartStep
 	var outputSecretsFile string
 
 	if enablePluginOutputSecrets {
-		outputFile = fmt.Sprintf("%s/%s-output.env", pipeline.SharedVolPath, step.ID)
+		outputFile = fmt.Sprintf("%s/%s-output.env", pipeline.GetSharedVolPath(), step.ID)
 		step.Envs["DRONE_OUTPUT"] = outputFile
 
-		outputSecretsFile = fmt.Sprintf("%s/%s-output-secrets.env", pipeline.SharedVolPath, step.ID)
+		outputSecretsFile = fmt.Sprintf("%s/%s-output-secrets.env", pipeline.GetSharedVolPath(), step.ID)
 		step.Envs["HARNESS_OUTPUT_SECRET_FILE"] = outputSecretsFile
 	} else {
-		outputFile = fmt.Sprintf("%s/%s.out", pipeline.SharedVolPath, step.ID)
+		outputFile = fmt.Sprintf("%s/%s.out", pipeline.GetSharedVolPath(), step.ID)
 		step.Envs["DRONE_OUTPUT"] = outputFile
 	}
 
@@ -68,7 +68,7 @@ func executeRunStep(ctx context.Context, engine *engine.Engine, r *api.StartStep
 	// Log the command being executed
 	printCommand(step, out)
 
-	artifactFile := fmt.Sprintf("%s/%s-artifact", pipeline.SharedVolPath, step.ID)
+	artifactFile := fmt.Sprintf("%s/%s-artifact", pipeline.GetSharedVolPath(), step.ID)
 	step.Envs["PLUGIN_ARTIFACT_FILE"] = artifactFile
 
 	exited, err := engine.Run(ctx, step, out)
