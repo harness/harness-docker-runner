@@ -34,7 +34,7 @@ func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.Start
 	log := logrus.New()
 	log.Out = out
 	optimizationState := types.DISABLED
-	cmd, err := instrumentation.GetCmd(ctx, &r.RunTest, r.Name, r.WorkingDir, log, r.Envs, tiConfig, &telemetry.TestIntelligenceMetaData)
+	cmd, err := instrumentation.GetCmd(ctx, &r.RunTest, r.Name, r.WorkingDir, r.ID, log, r.Envs, tiConfig, &telemetry.TestIntelligenceMetaData)
 	if err != nil {
 		return nil, nil, nil, nil, string(optimizationState), telemetry, err
 	}
@@ -75,13 +75,13 @@ func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.Start
 	}
 
 	//Passing default false for failed test for now.
-	if uerr := callgraph.Upload(ctx, step.Name, time.Since(start).Milliseconds(), log, time.Now(), tiConfig, cgDir, false); uerr != nil {
+	if _, uerr := callgraph.Upload(ctx, step.Name, time.Since(start).Milliseconds(), log, time.Now(), tiConfig, cgDir, step.ID, nil, false, nil); uerr != nil {
 		log.WithError(uerr).Errorln("unable to collect callgraph")
 	}
 
 	// Parse and upload savings to TI
 	if tiConfig.GetParseSavings() {
-		optimizationState = savings.ParseAndUploadSavings(ctx, r.WorkingDir, log, step.Name, checkStepSuccess(exited, err), timeTakenMs, tiConfig, r.Envs, telemetry)
+		optimizationState = savings.ParseAndUploadSavings(ctx, r.WorkingDir, log, step.Name, checkStepSuccess(exited, err), timeTakenMs, tiConfig, r.Envs, telemetry, step.ID)
 	}
 
 	summaryOutputs := make(map[string]string)

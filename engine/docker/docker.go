@@ -22,8 +22,8 @@ import (
 	"github.com/harness/harness-docker-runner/internal/docker/stdcopy"
 	"github.com/sirupsen/logrus"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	imagetypes "github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
@@ -88,7 +88,7 @@ func (e *Docker) Setup(ctx context.Context, pipelineConfig *spec.PipelineConfig)
 		if vol.EmptyDir == nil {
 			continue
 		}
-		_, err := e.client.VolumeCreate(ctx, volume.VolumeCreateBody{
+		_, err := e.client.VolumeCreate(ctx, volume.CreateOptions{
 			Name:   vol.EmptyDir.ID,
 			Driver: "local",
 			Labels: vol.EmptyDir.Labels,
@@ -122,7 +122,7 @@ func (e *Docker) Setup(ctx context.Context, pipelineConfig *spec.PipelineConfig)
 		driver = pipelineConfig.NetworkDriver
 	}
 
-	_, err := e.client.NetworkCreate(ctx, pipelineConfig.Network.ID, types.NetworkCreate{
+	_, err := e.client.NetworkCreate(ctx, pipelineConfig.Network.ID, network.CreateOptions{
 		Driver:  driver,
 		Options: pipelineConfig.Network.Options,
 		Labels:  pipelineConfig.Network.Labels,
@@ -162,7 +162,7 @@ func (e *Docker) Setup(ctx context.Context, pipelineConfig *spec.PipelineConfig)
 
 // Destroy the pipeline environment.
 func (e *Docker) Destroy(ctx context.Context, pipelineConfig *spec.PipelineConfig) error {
-	removeOpts := types.ContainerRemoveOptions{
+	removeOpts := container.RemoveOptions{
 		Force:         true,
 		RemoveLinks:   false,
 		RemoveVolumes: true,
@@ -269,7 +269,7 @@ func (e *Docker) Run(ctx context.Context, pipelineConfig *spec.PipelineConfig, s
 
 func (e *Docker) create(ctx context.Context, pipelineConfig *spec.PipelineConfig, step *spec.Step, output io.Writer) error { // nolint:gocyclo
 	// create pull options with encoded authorization credentials.
-	pullopts := types.ImagePullOptions{}
+	pullopts := imagetypes.PullOptions{}
 	if step.Auth != nil {
 		pullopts.RegistryAuth = auths.Header(
 			step.Auth.Username,
@@ -303,6 +303,7 @@ func (e *Docker) create(ctx context.Context, pipelineConfig *spec.PipelineConfig
 		toConfig(pipelineConfig, step),
 		toHostConfig(pipelineConfig, step),
 		toNetConfig(pipelineConfig, step),
+		nil, // platform
 		step.ID,
 	)
 
@@ -331,6 +332,7 @@ func (e *Docker) create(ctx context.Context, pipelineConfig *spec.PipelineConfig
 			toConfig(pipelineConfig, step),
 			toHostConfig(pipelineConfig, step),
 			toNetConfig(pipelineConfig, step),
+			nil, // platform
 			step.ID,
 		)
 	}
@@ -363,7 +365,7 @@ func (e *Docker) create(ctx context.Context, pipelineConfig *spec.PipelineConfig
 
 // helper function emulates the `docker start` command.
 func (e *Docker) start(ctx context.Context, id string) error {
-	return e.client.ContainerStart(ctx, id, types.ContainerStartOptions{})
+	return e.client.ContainerStart(ctx, id, container.StartOptions{})
 }
 
 // helper function emulates the `docker wait` command, blocking
@@ -413,7 +415,7 @@ func (e *Docker) wait(ctx context.Context, id string) (*runtime.State, error) {
 // helper function emulates the `docker logs -f` command, streaming
 // all container logs until the container stops.
 func (e *Docker) tail(ctx context.Context, id string, output io.Writer) error {
-	opts := types.ContainerLogsOptions{
+	opts := container.LogsOptions{
 		Follow:     true,
 		ShowStdout: true,
 		ShowStderr: true,
@@ -441,15 +443,16 @@ func (e *Docker) tail(ctx context.Context, id string, output io.Writer) error {
 func (e *Docker) softStop(ctx context.Context, name string) {
 	logrus.WithField("container", name).Infoln("starting soft stop")
 
-	timeout := 30 * time.Second
-	if err := e.client.ContainerStop(ctx, name, &timeout); err != nil {
+	timeout := 30
+	if err := e.client.ContainerStop(ctx, name, container.StopOptions{Timeout: &timeout}); err != nil {
 		logrus.WithField("container", name).WithField("error", err).Warnln("failed to stop the container")
 	}
 
 	// Before removing the container we want to be sure that it's in a healthy state to be removed.
 	now := time.Now()
+	timeoutDuration := time.Duration(timeout) * time.Second
 	for {
-		if time.Since(now) > timeout {
+		if time.Since(now) > timeoutDuration {
 			break
 		}
 		time.Sleep(1 * time.Second)
