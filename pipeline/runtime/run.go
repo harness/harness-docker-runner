@@ -43,22 +43,23 @@ func executeRunStep(ctx context.Context, engine *engine.Engine, r *api.StartStep
 
 	var outputSecretsFile string
 
+	// Set output file paths - use host path for file operations, container path for environment
+	hostOutputFile := fmt.Sprintf("%s/%s.out", pipeline.GetSharedVolPath(), step.ID)
+	containerOutputFile := fmt.Sprintf("/tmp/engine/%s.out", step.ID)
+
 	if enablePluginOutputSecrets {
-		outputFile = fmt.Sprintf("%s/%s-output.env", pipeline.GetSharedVolPath(), step.ID)
-		step.Envs["DRONE_OUTPUT"] = outputFile
+		hostOutputFile = fmt.Sprintf("%s/%s-output.env", pipeline.GetSharedVolPath(), step.ID)
+		containerOutputFile = fmt.Sprintf("/tmp/engine/%s-output.env", step.ID)
+		step.Envs["DRONE_OUTPUT"] = containerOutputFile
 
 		outputSecretsFile = fmt.Sprintf("%s/%s-output-secrets.env", pipeline.GetSharedVolPath(), step.ID)
-		step.Envs["HARNESS_OUTPUT_SECRET_FILE"] = outputSecretsFile
+		step.Envs["HARNESS_OUTPUT_SECRET_FILE"] = fmt.Sprintf("/tmp/engine/%s-output-secrets.env", step.ID)
 	} else {
-		outputFile = fmt.Sprintf("%s/%s.out", pipeline.GetSharedVolPath(), step.ID)
-		step.Envs["DRONE_OUTPUT"] = outputFile
+		step.Envs["DRONE_OUTPUT"] = containerOutputFile
 	}
 
-	if len(r.Outputs) > 0 {
-		step.Command[0] += getOutputsCmd(step.Entrypoint, r.Outputs, outputFile, enablePluginOutputSecrets)
-	} else if len(r.OutputVars) > 0 {
-		step.Command[0] += getOutputVarCmd(step.Entrypoint, r.OutputVars, outputFile, enablePluginOutputSecrets)
-	}
+	// Use host path for file operations by the runner
+	outputFile = hostOutputFile
 
 	log := logrus.New()
 	log.Out = out
@@ -103,7 +104,8 @@ func executeRunStep(ctx context.Context, engine *engine.Engine, r *api.StartStep
 	summaryOutputsV2 := convertOutputV2(leSummaryOutputsV2)
 
 	if exited != nil && exited.Exited && exited.ExitCode == 0 {
-		if enablePluginOutputSecrets {
+		isPlugin := len(step.Command) == 0 && len(step.Entrypoint) == 0
+		if enablePluginOutputSecrets || isPlugin {
 			outputs, err := fetchExportedVarsFromEnvFile(outputFile, out)
 			outputsV2 := []*api.OutputV2{}
 			var finalErr error

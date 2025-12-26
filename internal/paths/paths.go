@@ -24,7 +24,12 @@ var workingDir string
 func init() {
 	workingDir = os.Getenv(workingDirEnvVar)
 	if workingDir == "" {
-		workingDir = defaultWorkingDir
+		cwd, err := os.Getwd()
+		if err != nil {
+			workingDir = defaultWorkingDir
+		} else {
+			workingDir = cwd
+		}
 	}
 	// Ensure the path is absolute
 	if !filepath.IsAbs(workingDir) {

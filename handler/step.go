@@ -112,7 +112,7 @@ func convert(err error) api.PollStepResponse {
 func getSharedVolumeMount() *spec.VolumeMount {
 	return &spec.VolumeMount{
 		Name: pipeline.SharedVolName,
-		Path: pipeline.GetSharedVolPath(),
+		Path: pipeline.SharedVolPath, // Use the container path, not the host path
 	}
 }
 
