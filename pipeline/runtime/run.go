@@ -43,23 +43,22 @@ func executeRunStep(ctx context.Context, engine *engine.Engine, r *api.StartStep
 
 	var outputSecretsFile string
 
-	// Set output file paths - use host path for file operations, container path for environment
-	hostOutputFile := fmt.Sprintf("%s/%s.out", pipeline.GetSharedVolPath(), step.ID)
-	containerOutputFile := fmt.Sprintf("/tmp/engine/%s.out", step.ID)
-
 	if enablePluginOutputSecrets {
-		hostOutputFile = fmt.Sprintf("%s/%s-output.env", pipeline.GetSharedVolPath(), step.ID)
-		containerOutputFile = fmt.Sprintf("/tmp/engine/%s-output.env", step.ID)
-		step.Envs["DRONE_OUTPUT"] = containerOutputFile
+		outputFile = fmt.Sprintf("%s/%s-output.env", pipeline.GetSharedVolPath(), step.ID)
+		step.Envs["DRONE_OUTPUT"] = fmt.Sprintf("/tmp/engine/%s-output.env", step.ID)
 
 		outputSecretsFile = fmt.Sprintf("%s/%s-output-secrets.env", pipeline.GetSharedVolPath(), step.ID)
 		step.Envs["HARNESS_OUTPUT_SECRET_FILE"] = fmt.Sprintf("/tmp/engine/%s-output-secrets.env", step.ID)
 	} else {
-		step.Envs["DRONE_OUTPUT"] = containerOutputFile
+		outputFile = fmt.Sprintf("%s/%s.out", pipeline.GetSharedVolPath(), step.ID)
+		step.Envs["DRONE_OUTPUT"] = fmt.Sprintf("/tmp/engine/%s.out", step.ID)
 	}
 
-	// Use host path for file operations by the runner
-	outputFile = hostOutputFile
+	if len(r.Outputs) > 0 {
+		step.Command[0] += getOutputsCmd(step.Entrypoint, r.Outputs, outputFile, enablePluginOutputSecrets)
+	} else if len(r.OutputVars) > 0 {
+		step.Command[0] += getOutputVarCmd(step.Entrypoint, r.OutputVars, outputFile, enablePluginOutputSecrets)
+	}
 
 	log := logrus.New()
 	log.Out = out
@@ -104,8 +103,7 @@ func executeRunStep(ctx context.Context, engine *engine.Engine, r *api.StartStep
 	summaryOutputsV2 := convertOutputV2(leSummaryOutputsV2)
 
 	if exited != nil && exited.Exited && exited.ExitCode == 0 {
-		isPlugin := len(step.Command) == 0 && len(step.Entrypoint) == 0
-		if enablePluginOutputSecrets || isPlugin {
+		if enablePluginOutputSecrets {
 			outputs, err := fetchExportedVarsFromEnvFile(outputFile, out)
 			outputsV2 := []*api.OutputV2{}
 			var finalErr error
@@ -169,7 +167,7 @@ func executeRunStep(ctx context.Context, engine *engine.Engine, r *api.StartStep
 			return exited, outputs, artifact, outputsV2, string(optimizationState), telemetry, finalErr
 
 		} else {
-			outputs, err := fetchOutputVariables(outputFile, out, false) // nolint:govet
+			outputs, err := fetchExportedVarsFromEnvFile(outputFile, out)
 			if err != nil {
 				return exited, nil, nil, nil, string(optimizationState), telemetry, err
 			}
