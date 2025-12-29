@@ -167,7 +167,7 @@ func executeRunStep(ctx context.Context, engine *engine.Engine, r *api.StartStep
 			return exited, outputs, artifact, outputsV2, string(optimizationState), telemetry, finalErr
 
 		} else {
-			outputs, err := fetchExportedVarsFromEnvFile(outputFile, out) // nolint:govet
+			outputs, err := fetchOutputVariables(outputFile, out, false) // nolint:govet
 			if err != nil {
 				return exited, nil, nil, nil, string(optimizationState), telemetry, err
 			}

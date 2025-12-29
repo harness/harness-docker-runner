@@ -155,7 +155,24 @@ func fetchOutputVariables(outputFile string, out io.Writer, isDotEnvFile bool) (
 		line := s.Text()
 		sa := strings.Split(line, delimiter)
 		if len(sa) < 2 { // nolint:gomnd
-			log.WithField("variable", sa[0]).Warnln("output variable does not exist")
+			// Fallback: try equals delimiter if space delimiter didn't work
+			if delimiter == outputDelimiterSpace {
+				if eqIndex := strings.Index(line, "="); eqIndex > 0 {
+					key := strings.TrimSpace(line[:eqIndex])
+					value := strings.TrimSpace(line[eqIndex+1:])
+
+					if len(value) >= 2 && ((value[0] == '"' && value[len(value)-1] == '"') || (value[0] == '\'' && value[len(value)-1] == '\'')) {
+						value = value[1 : len(value)-1]
+					}
+					if key != "" && value != "" {
+						outputs[key] = value
+					}
+				} else {
+					log.WithField("variable", sa[0]).Warnln("output variable does not exist")
+				}
+			} else {
+				log.WithField("variable", sa[0]).Warnln("output variable does not exist")
+			}
 		} else {
 			outputs[sa[0]] = line[len(sa[0])+1:]
 		}
