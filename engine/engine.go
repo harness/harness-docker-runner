@@ -27,6 +27,7 @@ const (
 	DockerSockUnixPath = "/var/run/docker.sock"
 	DockerSockWinPath  = `\\.\pipe\docker_engine`
 	trueValue          = "true"
+	HARNESS_WORKSPACE  = "HARNESS_WORKSPACE"
 )
 
 type Engine struct {
@@ -112,6 +113,7 @@ func (e *Engine) Run(ctx context.Context, step *spec.Step, output io.Writer) (*r
 	}
 	step.Envs = envs
 	step.WorkingDir = pathConverter(step.WorkingDir)
+	step.Envs[HARNESS_WORKSPACE] = step.WorkingDir
 
 	// create files or folders specific to the step
 	if err := createFiles(step.Files); err != nil {
