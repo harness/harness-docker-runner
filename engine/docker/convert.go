@@ -9,15 +9,40 @@
 package docker
 
 import (
+	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/harness/harness-docker-runner/engine/spec"
+	"github.com/sirupsen/logrus"
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/go-connections/nat"
 )
+
+const (
+	windowsOS = "windows"
+)
+
+// getHcliHostPath returns the path to Linux hcli binary for mounting into containers
+func getHcliHostPath() string {
+	if runtime.GOOS == windowsOS {
+		return `C:\Windows\hcli.exe`
+	}
+	// For Linux hosts: use hcli from /usr/local/bin (where setup.go downloads it)
+	if runtime.GOOS == "linux" {
+		return "/usr/local/bin/hcli"
+	}
+	// For Mac: use Linux hcli from home directory (downloaded during setup)
+	homeDir := os.Getenv("HOME")
+	if homeDir == "" {
+		homeDir = os.Getenv("USERPROFILE")
+	}
+	return filepath.Join(homeDir, ".harness", "bin", "hcli")
+}
 
 // returns a container configuration.
 func toConfig(pipelineConfig *spec.PipelineConfig, step *spec.Step) *container.Config {
@@ -102,6 +127,45 @@ func toHostConfig(pipelineConfig *spec.PipelineConfig, step *spec.Step) *contain
 		config.Devices = toDeviceSlice(pipelineConfig, step)
 		config.Binds = toVolumeSlice(pipelineConfig, step)
 		config.Mounts = toVolumeMounts(pipelineConfig, step)
+	}
+
+	// Mount hcli binary for containers (following lite-engine approach)
+	hcliHostPath := getHcliHostPath()
+	hcliContainerPath := "/usr/local/bin/hcli" // Standard path in container
+
+	if runtime.GOOS == windowsOS {
+		// Windows: Mount directory containing hcli
+		logrus.Infoln("Windows host: mounting C:\\Windows directory for hcli")
+		config.Mounts = append(config.Mounts, mount.Mount{
+			Type:     mount.TypeBind,
+			Source:   `C:\Windows`,
+			Target:   `C:\harness`,
+			ReadOnly: true,
+		})
+	} else {
+		// Linux/macOS: Mount Linux hcli binary if it exists
+		if _, err := os.Stat(hcliHostPath); err == nil {
+			// Resolve symlinks for Rancher Desktop/Docker Desktop compatibility
+			// (same approach as used for volume bind mounts)
+			resolvedPath, err := filepath.EvalSymlinks(hcliHostPath)
+			if err != nil {
+				// If symlink resolution fails, use original path
+				resolvedPath = hcliHostPath
+			}
+			
+			logrus.Infoln("Mounting hcli binary into container")
+			
+			config.Mounts = append(config.Mounts, mount.Mount{
+				Type:   mount.TypeBind,
+				Source: resolvedPath,
+				Target: hcliContainerPath,
+			})
+		} else {
+			logrus.WithFields(logrus.Fields{
+				"path":  hcliHostPath,
+				"error": err,
+			}).Warnln("hcli binary not found - containerized steps won't be able to publish annotations")
+		}
 	}
 
 	if len(step.PortBindings) != 0 {

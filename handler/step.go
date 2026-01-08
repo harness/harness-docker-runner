@@ -51,8 +51,6 @@ func HandleStartStep(config *config.Config) http.HandlerFunc {
 		s.Volumes = append(s.Volumes, getSharedVolumeMount())
 		s.Volumes = append(s.Volumes, getGlobalVolumesMount(config)...)
 
-		stageData.State.AppendSecrets(s.Secrets)
-
 		s.StartStepRequestConfig.Network = stageData.State.GetNetwork()
 		hv, err := getHarnessVolume(stageData.State.GetVolumes())
 		if err != nil {
@@ -71,6 +69,26 @@ func HandleStartStep(config *config.Config) http.HandlerFunc {
 			updateDelegateCapacity(&s.StartStepRequestConfig)
 		}
 		updateGitCloneConfig(&s.StartStepRequestConfig)
+
+	// Set annotations service credentials if config is present
+	// These are added to the request Envs so they flow through toStep() to the container
+	if s.StartStepRequestConfig.AnnotationsConfig != nil && s.StartStepRequestConfig.AnnotationsConfig.URL != "" {
+		// Add annotations token to secrets FIRST for log masking
+		// This ensures the token is masked in logs and when 'env' command is run
+		if s.StartStepRequestConfig.AnnotationsConfig.Token != "" {
+			s.Secrets = append(s.Secrets, s.StartStepRequestConfig.AnnotationsConfig.Token)
+		}
+
+		// Then set the environment variables (token is already in secrets for masking)
+		if s.StartStepRequestConfig.Envs == nil {
+			s.StartStepRequestConfig.Envs = make(map[string]string)
+		}
+		s.StartStepRequestConfig.Envs["HARNESS_ANNOTATIONS_SERVICE_ENDPOINT"] = s.StartStepRequestConfig.AnnotationsConfig.URL
+		s.StartStepRequestConfig.Envs["HARNESS_ANNOTATIONS_SERVICE_TOKEN"] = s.StartStepRequestConfig.AnnotationsConfig.Token
+	}
+	
+	// Append all secrets (including annotations token) to stage state for masking
+	stageData.State.AppendSecrets(s.Secrets)
 
 		// fmt.Printf("start step request config: %+v\n", s.StartStepRequestConfig)
 

@@ -42,6 +42,9 @@ func PrepareSystem(config *config.Config) {
 	if !(EnvmanInstalled(instanceInfo)) {
 		installEnvman(instanceInfo, config.Server.EnvmanBinaryURI)
 	}
+	if !(HcliInstalled(instanceInfo)) {
+		installHcli(instanceInfo)
+	}
 }
 
 const windowsString = "windows"
@@ -302,4 +305,100 @@ func installDocker(instanceInfo InstanceInfo) {
 		}
 	}
 	logrus.Infoln("docker installed")
+}
+
+// HcliInstalled checks if hcli binary is installed
+func HcliInstalled(instanceInfo InstanceInfo) (installed bool) {
+	logrus.Infoln("checking hcli is installed")
+	hcli := "hcli"
+	switch instanceInfo.osType {
+	case windowsString:
+		hcli = "hcli.exe"
+	}
+
+	path, err := exec.LookPath(hcli)
+	if err != nil {
+		logrus.Infoln("hcli binary not found in PATH")
+		return false
+	}
+	cmd := exec.Command(path, "--version")
+	if err := cmd.Run(); err != nil {
+		logrus.Infof("Error running hcli --version: %v\n", err)
+		return false
+	}
+	logrus.Infoln("hcli is installed")
+	return true
+}
+
+func installHcli(instanceInfo InstanceInfo) {
+	// For non-Linux hosts (Mac/Windows), we need TWO hcli binaries:
+	// 1. Native binary for host OS (for non-containerized steps)
+	// 2. Linux binary for mounting into containers
+	
+	hostBinary := "hcli"
+	hostDir := "/usr/local/bin"
+	hostURL := fmt.Sprintf("https://github.com/harness/lite-engine/releases/download/v0.5.147/hcli-%s-%s", 
+		instanceInfo.osType, instanceInfo.archType)
+	
+	if instanceInfo.osType == windowsString {
+		hostBinary = "hcli.exe"
+		hostDir = "C:\\Windows"
+		hostURL += ".exe"
+	}
+	
+	// Download host OS hcli
+	logrus.WithFields(logrus.Fields{
+		"os":   instanceInfo.osType,
+		"arch": instanceInfo.archType,
+		"url":  hostURL,
+		"dest": filepath.Join(hostDir, hostBinary),
+	}).Infoln("Downloading hcli for host OS")
+	
+	err := downloadFile(hostURL, hostDir, hostBinary)
+	if err != nil {
+		logrus.WithError(err).Error("Host hcli download failed")
+		logrus.Infoln("Annotations feature may not work without hcli binary.")
+		logrus.Infof("You can manually download hcli from https://github.com/harness/lite-engine/releases/download/v0.5.147\n")
+		return
+	}
+	logrus.WithField("path", filepath.Join(hostDir, hostBinary)).Infoln("Host hcli installed successfully")
+	
+	// For non-Linux hosts: Download Linux hcli for containers
+	// (Docker containers run Linux even on Mac/Windows hosts with Docker Desktop/Rancher Desktop)
+	if instanceInfo.osType != "linux" {
+		// Use home directory for Linux hcli - it's accessible to Docker on Mac/Windows
+		homeDir := os.Getenv("HOME")
+		if homeDir == "" {
+			homeDir = os.Getenv("USERPROFILE") // Windows fallback
+		}
+		containerDir := filepath.Join(homeDir, ".harness", "bin")
+		os.MkdirAll(containerDir, 0755)
+		
+		containerBinary := "hcli"
+		containerURL := fmt.Sprintf("https://github.com/harness/lite-engine/releases/download/v0.5.147/hcli-linux-%s", 
+			instanceInfo.archType)
+		
+		logrus.WithFields(logrus.Fields{
+			"arch": instanceInfo.archType,
+			"url":  containerURL,
+			"dest": filepath.Join(containerDir, containerBinary),
+		}).Infoln("Downloading Linux hcli for containers")
+		
+		err := downloadFile(containerURL, containerDir, containerBinary)
+		if err != nil {
+			logrus.WithError(err).Warnln("Failed to download Linux hcli for containers")
+			logrus.Warnln("Containerized steps may not be able to publish annotations")
+			return
+		}
+		
+		hcliPath := filepath.Join(containerDir, containerBinary)
+		if err := os.Chmod(hcliPath, 0755); err != nil {
+			logrus.WithError(err).Warnln("Failed to chmod Linux hcli")
+			return
+		}
+		
+		logrus.WithField("path", hcliPath).Infoln("Linux hcli installed successfully for containers")
+	} else {
+		logrus.Infoln("Linux host detected - single hcli binary will work for both host and containers")
+	}
 }

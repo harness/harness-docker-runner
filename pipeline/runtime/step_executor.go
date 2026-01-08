@@ -78,6 +78,37 @@ func (e *StepExecutor) StartStep(ctx context.Context, r *api.StartStepRequest, s
 
 	go func() {
 		state, outputs, artifact, outputV2, optimizationState, telemetry, stepErr := e.executeStep(r, secrets, client, tiConfig, logConfig)
+		
+		// Debug: Check conditions for annotations
+		logrus.WithField("id", r.StartStepRequestConfig.ID).
+			WithField("stepErr", stepErr != nil).
+			WithField("exitCode", func() int {
+				if state != nil {
+					return state.ExitCode
+				}
+				return -1
+			}()).
+			WithField("ff_env", r.StartStepRequestConfig.Envs[annotationsFFEnv]).
+			Infoln("🔍 [DEBUG] Checking annotations conditions")
+		
+		// Post annotations to Pipeline Service if step succeeded and feature is enabled
+		ffEnabled := isAnnotationsEnabled(r.StartStepRequestConfig.Envs)
+		if stepErr == nil && state != nil && state.ExitCode == 0 && ffEnabled {
+			logrus.WithField("id", r.StartStepRequestConfig.ID).Infoln("ANNOTATIONS: scheduling annotations post")
+			go e.postAnnotationsToPipeline(context.Background(), r)
+		} else {
+			logrus.WithField("id", r.StartStepRequestConfig.ID).
+				WithField("ff_enabled", ffEnabled).
+				WithField("step_error", stepErr != nil).
+				WithField("exit_code", func() int {
+					if state != nil {
+						return state.ExitCode
+					}
+					return -1
+				}()).
+				Infoln("🔍 [DEBUG] Annotations NOT posted - conditions not met")
+		}
+		
 		status := StepStatus{Status: Complete, State: state, StepErr: stepErr, Outputs: outputs, Artifact: artifact, OutputV2: outputV2, OptimizationState: optimizationState, Telemetry: telemetry}
 		e.mu.Lock()
 		e.stepStatus[r.ID] = status
