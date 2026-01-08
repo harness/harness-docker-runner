@@ -12,9 +12,13 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/harness/harness-docker-runner/engine/spec"
+	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus"
 
 	"github.com/docker/docker/api/types/container"
@@ -22,6 +26,27 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/go-connections/nat"
 )
+
+const (
+	windowsOS = "windows"
+)
+
+// getHcliHostPath returns the path to Linux hcli binary for mounting into containers
+func getHcliHostPath() string {
+	if runtime.GOOS == windowsOS {
+		return `C:\Windows\hcli.exe`
+	}
+	// For Linux hosts: use hcli from /usr/local/bin (where setup.go downloads it)
+	if runtime.GOOS == "linux" {
+		return "/usr/local/bin/hcli"
+	}
+	// For Mac: use Linux hcli from home directory (downloaded during setup)
+	homeDir := os.Getenv("HOME")
+	if homeDir == "" {
+		homeDir = os.Getenv("USERPROFILE")
+	}
+	return filepath.Join(homeDir, ".harness", "bin", "hcli")
+}
 
 const (
 	windowsOS = "windows"
@@ -146,7 +171,6 @@ func toHostConfig(pipelineConfig *spec.PipelineConfig, step *spec.Step) *contain
 		// Linux/macOS: Mount Linux hcli binary if it exists
 		if _, err := os.Stat(hcliHostPath); err == nil {
 			// Resolve symlinks for Rancher Desktop/Docker Desktop compatibility
-			// (same approach as used for volume bind mounts)
 			resolvedPath, err := filepath.EvalSymlinks(hcliHostPath)
 			if err != nil {
 				// If symlink resolution fails, use original path
