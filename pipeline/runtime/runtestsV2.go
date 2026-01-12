@@ -82,6 +82,9 @@ func executeRunTestsV2Step(ctx context.Context, engine *engine.Engine, r *api.St
 	step.Envs["HARNESS_ANNOTATIONS_FILE"] = annotationsFile
 	// Set step ID (identifier from YAML) so hcli can populate it in annotations JSON
 	step.Envs["HARNESS_STEP_ID"] = step.Name
+	
+	// For Windows containers, inject hcli directory into PATH
+	injectHcliPathForWindowsContainer(step)
 
 	artifactFile := fmt.Sprintf("%s/%s-artifact", pipeline.GetSharedVolPath(), step.ID)
 	step.Envs["PLUGIN_ARTIFACT_FILE"] = artifactFile
