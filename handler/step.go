@@ -71,10 +71,9 @@ func HandleStartStep(config *config.Config) http.HandlerFunc {
 		updateGitCloneConfig(&s.StartStepRequestConfig)
 
 	// Set annotations service credentials if config is present
-	// These are added to the request Envs so they flow through toStep() to the container
 	if s.StartStepRequestConfig.AnnotationsConfig != nil && s.StartStepRequestConfig.AnnotationsConfig.URL != "" {
+		
 		// Add annotations token to secrets FIRST for log masking
-		// This ensures the token is masked in logs and when 'env' command is run
 		if s.StartStepRequestConfig.AnnotationsConfig.Token != "" {
 			s.Secrets = append(s.Secrets, s.StartStepRequestConfig.AnnotationsConfig.Token)
 		}

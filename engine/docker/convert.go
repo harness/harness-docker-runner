@@ -25,24 +25,8 @@ import (
 
 const (
 	windowsOS = "windows"
+	hcliPath  = "/usr/local/bin/hcli" // Linux/macOS host binary path
 )
-
-// getHcliHostPath returns the path to Linux hcli binary for mounting into containers
-func getHcliHostPath() string {
-	if runtime.GOOS == windowsOS {
-		return `C:\Windows\hcli.exe`
-	}
-	// For Linux hosts: use hcli from /usr/local/bin (where setup.go downloads it)
-	if runtime.GOOS == "linux" {
-		return "/usr/local/bin/hcli"
-	}
-	// For Mac: use Linux hcli from home directory (downloaded during setup)
-	homeDir := os.Getenv("HOME")
-	if homeDir == "" {
-		homeDir = os.Getenv("USERPROFILE")
-	}
-	return filepath.Join(homeDir, ".harness", "bin", "hcli")
-}
 
 // returns a container configuration.
 func toConfig(pipelineConfig *spec.PipelineConfig, step *spec.Step) *container.Config {
@@ -130,40 +114,47 @@ func toHostConfig(pipelineConfig *spec.PipelineConfig, step *spec.Step) *contain
 	}
 
 	// Mount hcli binary for containers (following lite-engine approach)
-	hcliHostPath := getHcliHostPath()
-	hcliContainerPath := "/usr/local/bin/hcli" // Standard path in container
-
 	if runtime.GOOS == windowsOS {
-		// Windows: Mount directory containing hcli
-		logrus.Infoln("Windows host: mounting C:\\Windows directory for hcli")
+		// Windows: Mount directory containing hcli.exe
+		// C:\Program Files\harness-hcli -> C:\harness-hcli (in container)
 		config.Mounts = append(config.Mounts, mount.Mount{
 			Type:     mount.TypeBind,
-			Source:   `C:\Windows`,
-			Target:   `C:\harness`,
+			Source:   `C:\Program Files\harness-hcli`,
+			Target:   `C:\harness-hcli`,
 			ReadOnly: true,
 		})
-	} else {
-		// Linux/macOS: Mount Linux hcli binary if it exists
-		if _, err := os.Stat(hcliHostPath); err == nil {
-			// Resolve symlinks for Rancher Desktop/Docker Desktop compatibility
-			resolvedPath, err := filepath.EvalSymlinks(hcliHostPath)
-			if err != nil {
-				// If symlink resolution fails, use original path
-				resolvedPath = hcliHostPath
-			}
-			
-			logrus.Infoln("Mounting hcli binary into container")
-			
+	} else if runtime.GOOS == "linux" {
+		// Linux: Mount host hcli binary directly
+		if _, err := os.Stat(hcliPath); err == nil {
 			config.Mounts = append(config.Mounts, mount.Mount{
 				Type:   mount.TypeBind,
-				Source: resolvedPath,
-				Target: hcliContainerPath,
+				Source: hcliPath,
+				Target: hcliPath,
 			})
-		} else {
-			logrus.WithFields(logrus.Fields{
-				"path":  hcliHostPath,
-				"error": err,
-			}).Warnln("hcli binary not found - containerized steps won't be able to publish annotations")
+		}
+	} else {
+		// macOS: Mount Linux hcli from ~/.harness/bin (downloaded during setup)
+		homeDir := os.Getenv("HOME")
+		if homeDir != "" {
+			macHcliPath := filepath.Join(homeDir, ".harness", "bin", "hcli")
+			if _, err := os.Stat(macHcliPath); err == nil {
+				// Resolve symlinks for Rancher Desktop compatibility
+				resolvedPath, err := filepath.EvalSymlinks(macHcliPath)
+				if err != nil {
+					resolvedPath = macHcliPath
+				}
+				
+				config.Mounts = append(config.Mounts, mount.Mount{
+					Type:   mount.TypeBind,
+					Source: resolvedPath,
+					Target: "/usr/local/bin/hcli", // Mount to standard location in container
+				})
+			} else {
+				logrus.WithFields(logrus.Fields{
+					"path":  macHcliPath,
+					"error": err,
+				}).Warnln("Linux hcli not found for macOS containers - annotations may not work")
+			}
 		}
 	}
 

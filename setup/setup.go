@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/harness/harness-docker-runner/config"
 	"github.com/sirupsen/logrus"
@@ -331,19 +332,38 @@ func HcliInstalled(instanceInfo InstanceInfo) (installed bool) {
 }
 
 func installHcli(instanceInfo InstanceInfo) {
-	// For non-Linux hosts (Mac/Windows), we need TWO hcli binaries:
-	// 1. Native binary for host OS (for non-containerized steps)
-	// 2. Linux binary for mounting into containers
+	// Strategy:
+	// 1. Download host OS binary first (for non-containerized steps)
+	//    - Linux: hcli -> /usr/local/bin/hcli
+	//    - Windows: hcli.exe -> C:\Program Files\lite-engine\hcli.exe
+	//    - macOS: hcli -> /usr/local/bin/hcli
+	// 2. For containers:
+	//    - Linux/Windows: Mount the same host binary (works natively)
+	//    - macOS: Download Linux binary separately (Mac containers are Linux-based)
 	
 	hostBinary := "hcli"
 	hostDir := "/usr/local/bin"
 	hostURL := fmt.Sprintf("https://github.com/harness/lite-engine/releases/download/v0.5.147/hcli-%s-%s", 
 		instanceInfo.osType, instanceInfo.archType)
 	
+	// Windows-specific paths and PATH setup
 	if instanceInfo.osType == windowsString {
 		hostBinary = "hcli.exe"
-		hostDir = "C:\\Windows"
+		hostDir = `C:\Program Files\harness-hcli`
 		hostURL += ".exe"
+		
+		// Create directory if it doesn't exist
+		if err := os.MkdirAll(hostDir, 0755); err != nil {
+			logrus.WithError(err).Errorf("Failed to create directory %s", hostDir)
+			return
+		}
+		
+		// Add to PATH for non-containerized steps
+		currentPath := os.Getenv("PATH")
+		if !strings.Contains(currentPath, hostDir) {
+			newPath := fmt.Sprintf("%s;%s", hostDir, currentPath)
+			os.Setenv("PATH", newPath)
+		}
 	}
 	
 	// Download host OS hcli
@@ -357,22 +377,25 @@ func installHcli(instanceInfo InstanceInfo) {
 	err := downloadFile(hostURL, hostDir, hostBinary)
 	if err != nil {
 		logrus.WithError(err).Error("Host hcli download failed")
-		logrus.Infoln("Annotations feature may not work without hcli binary.")
-		logrus.Infof("You can manually download hcli from https://github.com/harness/lite-engine/releases/download/v0.5.147\n")
 		return
 	}
-	logrus.WithField("path", filepath.Join(hostDir, hostBinary)).Infoln("Host hcli installed successfully")
+	logrus.WithField("path", filepath.Join(hostDir, hostBinary)).Infoln("Host hcli installed")
 	
-	// For non-Linux hosts: Download Linux hcli for containers
-	// (Docker containers run Linux even on Mac/Windows hosts with Docker Desktop/Rancher Desktop)
-	if instanceInfo.osType != "linux" {
-		// Use home directory for Linux hcli - it's accessible to Docker on Mac/Windows
+	// macOS special case: Download Linux hcli for containers
+	// (Mac containers are Linux-based, unlike Windows which can run Windows containers)
+	if instanceInfo.osType == osxString {
 		homeDir := os.Getenv("HOME")
 		if homeDir == "" {
-			homeDir = os.Getenv("USERPROFILE") // Windows fallback
+			// Fallback to /tmp if HOME is not set (extremely rare on macOS)
+			homeDir = "/tmp"
+			logrus.Warnln("HOME environment variable not set, using /tmp as fallback for Linux hcli download")
 		}
+		
 		containerDir := filepath.Join(homeDir, ".harness", "bin")
-		os.MkdirAll(containerDir, 0755)
+		if err := os.MkdirAll(containerDir, 0755); err != nil {
+			logrus.WithError(err).Warnf("Failed to create directory %s", containerDir)
+			return
+		}
 		
 		containerBinary := "hcli"
 		containerURL := fmt.Sprintf("https://github.com/harness/lite-engine/releases/download/v0.5.147/hcli-linux-%s", 
@@ -382,23 +405,14 @@ func installHcli(instanceInfo InstanceInfo) {
 			"arch": instanceInfo.archType,
 			"url":  containerURL,
 			"dest": filepath.Join(containerDir, containerBinary),
-		}).Infoln("Downloading Linux hcli for containers")
+		}).Infoln("Downloading Linux hcli for macOS containers")
 		
 		err := downloadFile(containerURL, containerDir, containerBinary)
 		if err != nil {
 			logrus.WithError(err).Warnln("Failed to download Linux hcli for containers")
-			logrus.Warnln("Containerized steps may not be able to publish annotations")
 			return
 		}
 		
-		hcliPath := filepath.Join(containerDir, containerBinary)
-		if err := os.Chmod(hcliPath, 0755); err != nil {
-			logrus.WithError(err).Warnln("Failed to chmod Linux hcli")
-			return
-		}
-		
-		logrus.WithField("path", hcliPath).Infoln("Linux hcli installed successfully for containers")
-	} else {
-		logrus.Infoln("Linux host detected - single hcli binary will work for both host and containers")
+		logrus.WithField("path", filepath.Join(containerDir, containerBinary)).Infoln("Linux hcli installed for macOS containers")
 	}
 }
