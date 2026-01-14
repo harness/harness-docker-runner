@@ -70,24 +70,24 @@ func HandleStartStep(config *config.Config) http.HandlerFunc {
 		}
 		updateGitCloneConfig(&s.StartStepRequestConfig)
 
-	// Set annotations service credentials if config is present
-	if s.StartStepRequestConfig.AnnotationsConfig != nil && s.StartStepRequestConfig.AnnotationsConfig.URL != "" {
-		
-		// Add annotations token to secrets FIRST for log masking
-		if s.StartStepRequestConfig.AnnotationsConfig.Token != "" {
-			s.Secrets = append(s.Secrets, s.StartStepRequestConfig.AnnotationsConfig.Token)
-		}
+		// Set annotations service credentials if config is present
+		if s.StartStepRequestConfig.AnnotationsConfig != nil && s.StartStepRequestConfig.AnnotationsConfig.URL != "" {
+			
+			// Add annotations token to secrets FIRST for log masking
+			if s.StartStepRequestConfig.AnnotationsConfig.Token != "" {
+				s.Secrets = append(s.Secrets, s.StartStepRequestConfig.AnnotationsConfig.Token)
+			}
 
-		// Then set the environment variables (token is already in secrets for masking)
-		if s.StartStepRequestConfig.Envs == nil {
-			s.StartStepRequestConfig.Envs = make(map[string]string)
+			// Then set the environment variables (token is already in secrets for masking)
+			if s.StartStepRequestConfig.Envs == nil {
+				s.StartStepRequestConfig.Envs = make(map[string]string)
+			}
+			s.StartStepRequestConfig.Envs["HARNESS_ANNOTATIONS_SERVICE_ENDPOINT"] = s.StartStepRequestConfig.AnnotationsConfig.URL
+			s.StartStepRequestConfig.Envs["HARNESS_ANNOTATIONS_SERVICE_TOKEN"] = s.StartStepRequestConfig.AnnotationsConfig.Token
 		}
-		s.StartStepRequestConfig.Envs["HARNESS_ANNOTATIONS_SERVICE_ENDPOINT"] = s.StartStepRequestConfig.AnnotationsConfig.URL
-		s.StartStepRequestConfig.Envs["HARNESS_ANNOTATIONS_SERVICE_TOKEN"] = s.StartStepRequestConfig.AnnotationsConfig.Token
-	}
-	
-	// Append all secrets (including annotations token) to stage state for masking
-	stageData.State.AppendSecrets(s.Secrets)
+		
+		// Append all secrets (including annotations token) to stage state for masking
+		stageData.State.AppendSecrets(s.Secrets)
 
 		// fmt.Printf("start step request config: %+v\n", s.StartStepRequestConfig)
 

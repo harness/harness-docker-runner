@@ -44,7 +44,7 @@ func PrepareSystem(config *config.Config) {
 		installEnvman(instanceInfo, config.Server.EnvmanBinaryURI)
 	}
 	if !(HcliInstalled(instanceInfo)) {
-		installHcli(instanceInfo)
+		installHcli(instanceInfo, config.Server.HcliBinaryURI)
 	}
 }
 
@@ -331,7 +331,7 @@ func HcliInstalled(instanceInfo InstanceInfo) (installed bool) {
 	return true
 }
 
-func installHcli(instanceInfo InstanceInfo) {
+func installHcli(instanceInfo InstanceInfo, hcliBinaryURI string) {
 	// Strategy:
 	// 1. Download host OS binary first (for non-containerized steps)
 	//    - Linux: hcli -> /usr/local/bin/hcli
@@ -343,8 +343,8 @@ func installHcli(instanceInfo InstanceInfo) {
 	
 	hostBinary := "hcli"
 	hostDir := "/usr/local/bin"
-	hostURL := fmt.Sprintf("https://github.com/harness/lite-engine/releases/download/v0.5.147/hcli-%s-%s", 
-		instanceInfo.osType, instanceInfo.archType)
+	hostURL := fmt.Sprintf("%s/hcli-%s-%s", 
+		hcliBinaryURI, instanceInfo.osType, instanceInfo.archType)
 	
 	// Windows-specific paths and PATH setup
 	if instanceInfo.osType == windowsString {
@@ -398,8 +398,8 @@ func installHcli(instanceInfo InstanceInfo) {
 		}
 		
 		containerBinary := "hcli"
-		containerURL := fmt.Sprintf("https://github.com/harness/lite-engine/releases/download/v0.5.147/hcli-linux-%s", 
-			instanceInfo.archType)
+		containerURL := fmt.Sprintf("%s/hcli-linux-%s", 
+			hcliBinaryURI, instanceInfo.archType)
 		
 		logrus.WithFields(logrus.Fields{
 			"arch": instanceInfo.archType,
