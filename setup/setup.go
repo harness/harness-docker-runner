@@ -391,13 +391,13 @@ func installHcli(instanceInfo InstanceInfo, hcliBinaryURI string) {
 			logrus.Warnln("HOME environment variable not set, using /tmp as fallback for Linux hcli download")
 		}
 		
-		containerDir := filepath.Join(homeDir, ".harness", "bin")
+		containerDir := filepath.Join(homeDir, "harness", "bin")
 		if err := os.MkdirAll(containerDir, 0755); err != nil {
 			logrus.WithError(err).Warnf("Failed to create directory %s", containerDir)
 			return
 		}
 		
-		containerBinary := "hcli"
+		containerBinary := "hcli-linux"
 		containerURL := fmt.Sprintf("%s/hcli-linux-%s", 
 			hcliBinaryURI, instanceInfo.archType)
 		

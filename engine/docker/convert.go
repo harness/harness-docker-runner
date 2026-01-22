@@ -133,28 +133,29 @@ func toHostConfig(pipelineConfig *spec.PipelineConfig, step *spec.Step) *contain
 			})
 		}
 	} else {
-		// macOS: Mount Linux hcli from ~/.harness/bin (downloaded during setup)
+		// macOS: Mount Linux hcli from $HOME/harness/bin/hcli-linux (downloaded during setup)
 		homeDir := os.Getenv("HOME")
-		if homeDir != "" {
-			macHcliPath := filepath.Join(homeDir, ".harness", "bin", "hcli")
-			if _, err := os.Stat(macHcliPath); err == nil {
-				// Resolve symlinks for Rancher Desktop compatibility
-				resolvedPath, err := filepath.EvalSymlinks(macHcliPath)
-				if err != nil {
-					resolvedPath = macHcliPath
-				}
-				
-				config.Mounts = append(config.Mounts, mount.Mount{
-					Type:   mount.TypeBind,
-					Source: resolvedPath,
-					Target: "/usr/local/bin/hcli", // Mount to standard location in container
-				})
-			} else {
-				logrus.WithFields(logrus.Fields{
-					"path":  macHcliPath,
-					"error": err,
-				}).Warnln("Linux hcli not found for macOS containers - annotations may not work")
+		if homeDir == "" {
+			homeDir = "/tmp"
+		}
+		macHcliPath := filepath.Join(homeDir, "harness", "bin", "hcli-linux")
+		if _, err := os.Stat(macHcliPath); err == nil {
+			// Resolve symlinks for Rancher Desktop compatibility
+			resolvedPath, err := filepath.EvalSymlinks(macHcliPath)
+			if err != nil {
+				resolvedPath = macHcliPath
 			}
+			
+			config.Mounts = append(config.Mounts, mount.Mount{
+				Type:   mount.TypeBind,
+				Source: resolvedPath,
+				Target: "/usr/local/bin/hcli", // Mount to standard location in container
+			})
+		} else {
+			logrus.WithFields(logrus.Fields{
+				"path":  macHcliPath,
+				"error": err,
+			}).Warnln("Linux hcli not found for macOS containers - annotations may not work")
 		}
 	}
 
