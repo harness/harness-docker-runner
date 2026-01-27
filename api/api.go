@@ -101,7 +101,8 @@ type (
 		Timeout           int         `json:"timeout,omitempty"` // step timeout in seconds
 		MountDockerSocket *bool       `json:"mount_docker_socket"`
 		Outputs           []*OutputV2 `json:"outputs,omitempty"`
-
+		AnnotationsConfig *AnnotationsConfig `json:"annotations_config,omitempty"` // Annotations config for publishing
+		
 		// Valid only for steps running on docker container
 		Auth         *spec.Auth           `json:"auth,omitempty"`
 		CPUPeriod    int64                `json:"cpu_period,omitempty"`
@@ -195,6 +196,11 @@ type (
 
 	JunitReport struct {
 		Paths []string `json:"paths,omitempty"`
+	}
+
+	AnnotationsConfig struct {
+		URL   string `json:"base_url,omitempty"`
+		Token string `json:"token,omitempty"`
 	}
 )
 

@@ -78,6 +78,15 @@ func (e *StepExecutor) StartStep(ctx context.Context, r *api.StartStepRequest, s
 
 	go func() {
 		state, outputs, artifact, outputV2, optimizationState, telemetry, stepErr := e.executeStep(r, secrets, client, tiConfig, logConfig)
+		
+		// Post annotations to Pipeline Service if step succeeded and feature is enabled
+		ffEnabled := isAnnotationsEnabled(r.StartStepRequestConfig.Envs)
+		if stepErr == nil && state != nil && state.ExitCode == 0 && ffEnabled {
+			go e.postAnnotationsToPipeline(context.Background(), r)
+		} else {
+			logrus.Infoln("Annotations NOT posted - conditions not met")
+		}
+		
 		status := StepStatus{Status: Complete, State: state, StepErr: stepErr, Outputs: outputs, Artifact: artifact, OutputV2: outputV2, OptimizationState: optimizationState, Telemetry: telemetry}
 		e.mu.Lock()
 		e.stepStatus[r.ID] = status
