@@ -17,6 +17,7 @@ import (
 	"github.com/harness/harness-docker-runner/api"
 	"github.com/harness/harness-docker-runner/engine"
 	"github.com/harness/harness-docker-runner/pipeline"
+	"github.com/harness/lite-engine/common"
 	leRuntime "github.com/harness/lite-engine/pipeline/runtime"
 	"github.com/harness/lite-engine/ti/callgraph"
 	tiCfg "github.com/harness/lite-engine/ti/config"
@@ -38,7 +39,7 @@ func executeRunTestsV2Step(ctx context.Context, engine *engine.Engine, r *api.St
 	step := toStep(r)
 	optimizationState := types.DISABLED
 	step.Entrypoint = r.RunTestsV2.Entrypoint
-	preCmd, err := leRuntime.SetupRunTestV2(ctx, &r.RunTestsV2, step.Name, r.WorkingDir, log, r.Envs, tiConfig, &telemetry.TestIntelligenceMetaData)
+	preCmd, err := leRuntime.SetupRunTestV2(ctx, &r.RunTestsV2, step.Name, r.WorkingDir, r.ID, log, r.Envs, tiConfig, &telemetry.TestIntelligenceMetaData)
 	if err != nil {
 		return nil, nil, nil, nil, string(optimizationState), telemetry, err
 	}
@@ -105,13 +106,13 @@ func executeRunTestsV2Step(ctx context.Context, engine *engine.Engine, r *api.St
 	}
 
 	//Passing default false for failed test for now
-	if uerr := callgraph.Upload(ctx, step.Name, time.Since(start).Milliseconds(), log, time.Now(), tiConfig, outDir, false); uerr != nil {
+	if _, uerr := callgraph.Upload(ctx, step.Name, time.Since(start).Milliseconds(), log, time.Now(), tiConfig, outDir, r.ID, nil, false, nil); uerr != nil {
 		log.WithError(uerr).Errorln("unable to collect callgraph")
 	}
 
 	// Parse and upload savings to TI
 	if tiConfig.GetParseSavings() {
-		optimizationState = savings.ParseAndUploadSavings(ctx, r.WorkingDir, log, step.Name, checkStepSuccess(exited, err), timeTakenMs, tiConfig, r.Envs, telemetry)
+		optimizationState = savings.ParseAndUploadSavings(ctx, r.WorkingDir, log, step.Name, checkStepSuccess(exited, err), timeTakenMs, tiConfig, r.Envs, telemetry, common.StepTypeRunTestsV2)
 	}
 
 	artifact, _ := fetchArtifactDataFromArtifactFile(artifactFile, out)
