@@ -56,7 +56,7 @@ func HandleSetup(config *config.Config) http.HandlerFunc {
 		// Add this dir to TIConfig for uploading the data
 		tiVolume := getTiVolume(s.ID)
 		s.Volumes = append(s.Volumes, tiVolume)
-		tiConfig := getTiCfg(s.TIConfig, tiVolume.HostPath.Path)
+		tiConfig := getTiCfg(s.TIConfig, tiVolume.HostPath.Path, s.Envs)
 
 		setProxyEnvs(s.Envs)
 		engine, err := engine.NewEnv(docker.Opts{})
@@ -245,7 +245,11 @@ func setProxyEnvs(environment map[string]string) {
 	}
 }
 
-func getTiCfg(t api.TIConfig, dataDir string) tiCfg.Cfg {
+func getTiCfg(t api.TIConfig, dataDir string, envs map[string]string) tiCfg.Cfg {
+	var parentUniqueID string
+	if envs != nil {
+		parentUniqueID = envs["HARNESS_PARENT_UNIQUE_ID"]
+	}
 	cfg := tiCfg.New(t.URL, t.Token, t.AccountID, t.OrgID, t.ProjectID, t.PipelineID, t.BuildID, t.StageID, t.Repo,
 		t.Sha, t.CommitLink, t.SourceBranch, t.TargetBranch, t.CommitBranch, dataDir, "", false, "", "")
 	return cfg

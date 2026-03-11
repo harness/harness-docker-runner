@@ -34,7 +34,7 @@ func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.Start
 	log := logrus.New()
 	log.Out = out
 	optimizationState := types.DISABLED
-	cmd, err := instrumentation.GetCmd(ctx, &r.RunTest, r.Name, r.WorkingDir, log, r.Envs, tiConfig, &telemetry.TestIntelligenceMetaData)
+	cmd, err := instrumentation.GetCmd(ctx, &r.RunTest, r.Name, r.WorkingDir, r.ID, log, r.Envs, tiConfig, &telemetry.TestIntelligenceMetaData)
 	if err != nil {
 		return nil, nil, nil, nil, string(optimizationState), telemetry, err
 	}
@@ -62,6 +62,15 @@ func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.Start
 		step.Command[0] += getOutputVarCmd(step.Entrypoint, r.OutputVars, outputFile, enablePluginOutputSecrets)
 	}
 
+	// Set annotations file path for producers to write rich annotations JSON
+	annotationsFile := fmt.Sprintf("%s/%s-annotations.json", pipeline.GetSharedVolPath(), step.ID)
+	step.Envs["HARNESS_ANNOTATIONS_FILE"] = annotationsFile
+	// Set step ID (identifier from YAML) so hcli can populate it in annotations JSON
+	step.Envs["HARNESS_STEP_ID"] = step.Name
+
+	// For Windows containers, inject hcli directory into PATH
+	injectHcliPathForWindowsContainer(step)
+
 	artifactFile := fmt.Sprintf("%s/%s-artifact", pipeline.GetSharedVolPath(), step.ID)
 	step.Envs["PLUGIN_ARTIFACT_FILE"] = artifactFile
 
@@ -75,7 +84,7 @@ func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.Start
 	}
 
 	//Passing default false for failed test for now.
-	if uerr := callgraph.Upload(ctx, step.Name, time.Since(start).Milliseconds(), log, time.Now(), tiConfig, cgDir, false); uerr != nil {
+	if _, uerr := callgraph.Upload(ctx, step.Name, time.Since(start).Milliseconds(), log, time.Now(), tiConfig, cgDir, r.ID, nil, false, nil); uerr != nil {
 		log.WithError(uerr).Errorln("unable to collect callgraph")
 	}
 

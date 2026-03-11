@@ -28,6 +28,9 @@ const (
 	trueValue                   = "true"
 	outputDelimiterSpace        = " "
 	outputDelimiterEquals       = "="
+	
+	// Windows container path where hcli is mounted (used for PATH injection)
+	hcliWindowsContainerPath = `C:\harness-hcli`
 )
 
 func getNudges() []logstream.Nudge {
@@ -277,3 +280,54 @@ func convertOutputV2(outputV2 []*leapi.OutputV2) []*api.OutputV2 {
 	}
 	return outputs
 }
+
+// injectHcliPathForWindowsContainer adds hcli directory to PATH for Windows container steps
+// by prepending it in the command script (similar to lite-engine approach)
+func injectHcliPathForWindowsContainer(step *spec.Step) {
+	defer func() {
+		if r := recover(); r != nil {
+			logrus.WithField("panic", r).Warn("recovered from panic in hcli PATH injection")
+		}
+	}()
+	
+	// Only inject for Windows containers with image and command
+	if !shouldInjectHcliPath(step) {
+		return
+	}
+	
+	shell := ""
+	if len(step.Entrypoint) > 0 {
+		shell = strings.ToLower(step.Entrypoint[0])
+	}
+	
+	// Prepend hcli path based on shell type
+	if len(step.Command) > 0 {
+		// For PowerShell, prepend PATH assignment
+		if strings.Contains(shell, "powershell") || strings.Contains(shell, "pwsh") {
+			step.Command[0] = `$env:PATH = '` + hcliWindowsContainerPath + `;' + $env:PATH; ` + step.Command[0]
+		} else if strings.Contains(shell, "cmd") {
+			// For CMD, prepend PATH assignment
+			step.Command[0] = `set "PATH=` + hcliWindowsContainerPath + `;%PATH%" & ` + step.Command[0]
+		}
+	}
+}
+
+// shouldInjectHcliPath checks if hcli PATH injection should be performed
+func shouldInjectHcliPath(step *spec.Step) bool {
+	if step == nil {
+		return false
+	}
+	
+	// Only inject for containerized steps (have image)
+	if step.Image == "" {
+		return false
+	}
+	
+	// Only inject if there's a command to modify
+	if len(step.Command) == 0 {
+		return false
+	}
+	
+	return true
+}
+
