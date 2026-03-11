@@ -18,7 +18,6 @@ import (
 	"github.com/harness/harness-docker-runner/api"
 	"github.com/harness/harness-docker-runner/engine"
 	"github.com/harness/harness-docker-runner/pipeline"
-	"github.com/harness/lite-engine/common"
 	tiCfg "github.com/harness/lite-engine/ti/config"
 	"github.com/harness/lite-engine/ti/report"
 	"github.com/harness/lite-engine/ti/savings"
@@ -74,7 +73,7 @@ func executeRunStep(ctx context.Context, engine *engine.Engine, r *api.StartStep
 	step.Envs["HARNESS_ANNOTATIONS_FILE"] = annotationsFile
 	// Set step ID (identifier from YAML) so hcli can populate it in annotations JSON
 	step.Envs["HARNESS_STEP_ID"] = step.Name
-	
+
 	// For Windows containers, inject hcli directory into PATH
 	injectHcliPathForWindowsContainer(step)
 
@@ -89,9 +88,7 @@ func executeRunStep(ctx context.Context, engine *engine.Engine, r *api.StartStep
 	}
 
 	// Parse and upload savings to TI
-	if tiConfig.GetParseSavings() {
-		optimizationState = savings.ParseAndUploadSavings(ctx, r.WorkingDir, log, step.Name, checkStepSuccess(exited, err), timeTakenMs, tiConfig, r.Envs, telemetry, common.StepTypeRun)
-	}
+	optimizationState = savings.ParseAndUploadSavings(ctx, r.WorkingDir, log, step.Name, checkStepSuccess(exited, err), timeTakenMs, tiConfig, r.Envs, telemetry)
 
 	//only for git-clone-step
 	if buildLangFile, found := r.Envs["PLUGIN_BUILD_TOOL_FILE"]; found {

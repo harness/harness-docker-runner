@@ -17,7 +17,6 @@ import (
 	"github.com/harness/harness-docker-runner/api"
 	"github.com/harness/harness-docker-runner/engine"
 	"github.com/harness/harness-docker-runner/pipeline"
-	"github.com/harness/lite-engine/common"
 	leRuntime "github.com/harness/lite-engine/pipeline/runtime"
 	"github.com/harness/lite-engine/ti/callgraph"
 	tiCfg "github.com/harness/lite-engine/ti/config"
@@ -83,7 +82,7 @@ func executeRunTestsV2Step(ctx context.Context, engine *engine.Engine, r *api.St
 	step.Envs["HARNESS_ANNOTATIONS_FILE"] = annotationsFile
 	// Set step ID (identifier from YAML) so hcli can populate it in annotations JSON
 	step.Envs["HARNESS_STEP_ID"] = step.Name
-	
+
 	// For Windows containers, inject hcli directory into PATH
 	injectHcliPathForWindowsContainer(step)
 
@@ -111,9 +110,7 @@ func executeRunTestsV2Step(ctx context.Context, engine *engine.Engine, r *api.St
 	}
 
 	// Parse and upload savings to TI
-	if tiConfig.GetParseSavings() {
-		optimizationState = savings.ParseAndUploadSavings(ctx, r.WorkingDir, log, step.Name, checkStepSuccess(exited, err), timeTakenMs, tiConfig, r.Envs, telemetry, common.StepTypeRunTestsV2)
-	}
+	optimizationState = savings.ParseAndUploadSavings(ctx, r.WorkingDir, log, step.Name, checkStepSuccess(exited, err), timeTakenMs, tiConfig, r.Envs, telemetry)
 
 	artifact, _ := fetchArtifactDataFromArtifactFile(artifactFile, out)
 	summaryOutputs := make(map[string]string)

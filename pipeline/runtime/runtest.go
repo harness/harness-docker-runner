@@ -14,7 +14,6 @@ import (
 	"github.com/harness/harness-docker-runner/api"
 	"github.com/harness/harness-docker-runner/engine"
 	"github.com/harness/harness-docker-runner/pipeline"
-	"github.com/harness/lite-engine/common"
 	"github.com/harness/lite-engine/ti/callgraph"
 	tiCfg "github.com/harness/lite-engine/ti/config"
 	"github.com/harness/lite-engine/ti/instrumentation"
@@ -68,7 +67,7 @@ func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.Start
 	step.Envs["HARNESS_ANNOTATIONS_FILE"] = annotationsFile
 	// Set step ID (identifier from YAML) so hcli can populate it in annotations JSON
 	step.Envs["HARNESS_STEP_ID"] = step.Name
-	
+
 	// For Windows containers, inject hcli directory into PATH
 	injectHcliPathForWindowsContainer(step)
 
@@ -90,9 +89,7 @@ func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.Start
 	}
 
 	// Parse and upload savings to TI
-	if tiConfig.GetParseSavings() {
-		optimizationState = savings.ParseAndUploadSavings(ctx, r.WorkingDir, log, step.Name, checkStepSuccess(exited, err), timeTakenMs, tiConfig, r.Envs, telemetry, common.StepTypeRunTests)
-	}
+	optimizationState = savings.ParseAndUploadSavings(ctx, r.WorkingDir, log, step.Name, checkStepSuccess(exited, err), timeTakenMs, tiConfig, r.Envs, telemetry)
 
 	summaryOutputs := make(map[string]string)
 	reportSaveErr := report.SaveReportSummaryToOutputs(ctx, tiConfig, step.Name, summaryOutputs, log, r.Envs)
