@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"sync"
 	"time"
 
@@ -35,6 +36,7 @@ type StepStatus struct {
 	OutputV2          []*api.OutputV2
 	OptimizationState string
 	Telemetry         *types.TelemetryData
+	ErrorDetails      *api.ErrorDetails
 }
 
 const (
@@ -78,7 +80,7 @@ func (e *StepExecutor) StartStep(ctx context.Context, r *api.StartStepRequest, s
 
 	go func() {
 		state, outputs, artifact, outputV2, optimizationState, telemetry, stepErr := e.executeStep(r, secrets, client, tiConfig, logConfig)
-		
+
 		// Post annotations to Pipeline Service if step succeeded and feature is enabled
 		ffEnabled := isAnnotationsEnabled(r.StartStepRequestConfig.Envs)
 		if stepErr == nil && state != nil && state.ExitCode == 0 && ffEnabled {
@@ -86,8 +88,24 @@ func (e *StepExecutor) StartStep(ctx context.Context, r *api.StartStepRequest, s
 		} else {
 			logrus.Infoln("Annotations NOT posted - conditions not met")
 		}
-		
-		status := StepStatus{Status: Complete, State: state, StepErr: stepErr, Outputs: outputs, Artifact: artifact, OutputV2: outputV2, OptimizationState: optimizationState, Telemetry: telemetry}
+
+		exitCode := 0
+		if state != nil {
+			exitCode = state.ExitCode
+		}
+
+		var errorDetails *api.ErrorDetails
+		capturedOutputPath := getCapturedOutputPath(r.ID)
+		if shouldCategorizeError(exitCode, stepErr, r.StartStepRequestConfig.Envs) {
+			errorDetails = evaluateErrorCategorization(
+				r.WorkingDir, capturedOutputPath,
+				exitCode, r.ID, r.StageRuntimeID,
+				r.StartStepRequestConfig.Envs,
+			)
+		}
+		os.Remove(capturedOutputPath)
+
+		status := StepStatus{Status: Complete, State: state, StepErr: stepErr, Outputs: outputs, Artifact: artifact, OutputV2: outputV2, OptimizationState: optimizationState, Telemetry: telemetry, ErrorDetails: errorDetails}
 		e.mu.Lock()
 		e.stepStatus[r.ID] = status
 		channels := e.stepWaitCh[r.ID]
@@ -280,7 +298,20 @@ func (e *StepExecutor) executeStep(r *api.StartStepRequest, secrets []string, cl
 		defer cancel()
 	}
 
-	exited, outputs, artifact, outputV2, optimizationState, telemetry, err := e.run(ctx, e.engine, r, wr, tiConfig)
+	// Tee step output to a file for error categorization.
+	// The file persists after this function returns so the caller can pass it to hcli.
+	runWriter := io.Writer(wr)
+	if isErrorCategorizationEnabled(r.StartStepRequestConfig.Envs) {
+		capturedOutputPath := getCapturedOutputPath(r.ID)
+		if capturedFile, ferr := os.Create(capturedOutputPath); ferr == nil {
+			defer capturedFile.Close()
+			runWriter = io.MultiWriter(wr, capturedFile)
+		} else {
+			logrus.WithError(ferr).Warnln("failed to create captured output file for error categorization")
+		}
+	}
+
+	exited, outputs, artifact, outputV2, optimizationState, telemetry, err := e.run(ctx, e.engine, r, runWriter, tiConfig)
 	if err != nil {
 		result = multierror.Append(result, err)
 	}
@@ -333,6 +364,7 @@ func convertStatus(status StepStatus) *api.PollStepResponse {
 		OutputV2:          status.OutputV2,
 		OptimizationState: status.OptimizationState,
 		Telemetry:         status.Telemetry,
+		ErrorDetails:      status.ErrorDetails,
 	}
 
 	stepErr := status.StepErr
