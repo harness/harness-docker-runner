@@ -14,21 +14,72 @@ import (
 
 	"github.com/harness/harness-docker-runner/api"
 	"github.com/harness/harness-docker-runner/pipeline"
+	tiCfg "github.com/harness/lite-engine/ti/config"
 	"github.com/sirupsen/logrus"
 )
 
 const (
 	errorCategorizationFF      = "CI_CUSTOM_ERROR_CATEGORIZATION"
 	errorsYAMLPathEnv          = "HARNESS_ERRORS_YAML_PATH"
+	stageIDEnv                 = "HARNESS_STAGE_ID"
+	pipelineIDEnv              = "HARNESS_PIPELINE_ID"
 	evaluationTimeout          = 5 * time.Second
 	hcliWindowsBinary          = "hcli.exe"
 	hcliUnixBinary             = "hcli"
-	capturedOutputSuffix       = "-captured-output.log"
+	stdoutLogSuffix            = "-stdout.log"
+	stderrLogSuffix            = "-stderr.log"
+	harnessInternalLogsSubdir  = ".harness-internal/logs"
 	harnessInternalCacheSubdir = ".harness-internal/cache"
 )
 
-func getCapturedOutputPath(stepID string) string {
-	return filepath.Join(pipeline.GetSharedVolPath(), stepID+capturedOutputSuffix)
+func getStdoutLogFilePath(stepID string) string {
+	return filepath.Join(pipeline.GetSharedVolPath(), harnessInternalLogsSubdir, stepID+stdoutLogSuffix)
+}
+
+func getStderrLogFilePath(stepID string) string {
+	return filepath.Join(pipeline.GetSharedVolPath(), harnessInternalLogsSubdir, stepID+stderrLogSuffix)
+}
+
+func ensureLogDir() {
+	dir := filepath.Join(pipeline.GetSharedVolPath(), harnessInternalLogsSubdir)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		logrus.WithError(err).Warnln("failed to create log capture directory")
+	}
+}
+
+// cleanupLogFiles removes the stdout and stderr capture files. It is idempotent:
+// already-deleted or never-created files are silently ignored.
+func cleanupLogFiles(stdoutPath, stderrPath string) {
+	if err := os.Remove(stdoutPath); err != nil && !os.IsNotExist(err) {
+		logrus.WithError(err).WithField("path", stdoutPath).Warnln("failed to remove stdout log file")
+	}
+	if err := os.Remove(stderrPath); err != nil && !os.IsNotExist(err) {
+		logrus.WithError(err).WithField("path", stderrPath).Warnln("failed to remove stderr log file")
+	}
+}
+
+func resolveStageID(stageRuntimeID string, envs map[string]string, tiConfig *tiCfg.Cfg) string {
+	if v, ok := envs[stageIDEnv]; ok && v != "" {
+		return v
+	}
+	if tiConfig != nil {
+		if id := tiConfig.GetStageID(); id != "" {
+			return id
+		}
+	}
+	return stageRuntimeID
+}
+
+func resolvePipelineID(envs map[string]string, tiConfig *tiCfg.Cfg) string {
+	if v, ok := envs[pipelineIDEnv]; ok && v != "" {
+		return v
+	}
+	if tiConfig != nil {
+		if id := tiConfig.GetPipelineID(); id != "" {
+			return id
+		}
+	}
+	return ""
 }
 
 func isErrorCategorizationEnabled(envs map[string]string) bool {
@@ -83,13 +134,18 @@ func resolveErrorsYAMLPath(workingDir string, envs map[string]string) string {
 // it never blocks step completion.
 func evaluateErrorCategorization(
 	workingDir string,
-	capturedOutputPath string,
+	stdoutPath string,
+	stderrPath string,
 	exitCode int,
 	stepID string,
-	stageID string,
+	stageRuntimeID string,
 	envs map[string]string,
+	tiConfig *tiCfg.Cfg,
 ) *api.ErrorDetails {
 	start := time.Now()
+
+	stageID := resolveStageID(stageRuntimeID, envs, tiConfig)
+	pipelineID := resolvePipelineID(envs, tiConfig)
 
 	type result struct {
 		details *api.ErrorDetails
@@ -122,22 +178,13 @@ func evaluateErrorCategorization(
 			logrus.WithError(err).Warnln("failed to create cache dir for error categorization")
 		}
 
-		pipelineID := envs["HARNESS_PIPELINE_ID"]
-
-		stderrPath := capturedOutputPath + ".stderr"
-		if err := os.WriteFile(stderrPath, []byte{}, 0644); err != nil {
-			logrus.WithError(err).Warnln("failed to create empty stderr file for error categorization")
-			stderrPath = capturedOutputPath
-		}
-		defer os.Remove(stderrPath)
-
 		ctx, cancel := context.WithTimeout(context.Background(), evaluationTimeout)
 		defer cancel()
 
 		args := []string{
 			"errors", "evaluate",
 			"--yaml-path", yamlPath,
-			"--stdout-path", capturedOutputPath,
+			"--stdout-path", stdoutPath,
 			"--stderr-path", stderrPath,
 			"--exit-code", strconv.Itoa(exitCode),
 			"--step-id", stepID,
@@ -147,9 +194,11 @@ func evaluateErrorCategorization(
 		}
 
 		logrus.WithFields(logrus.Fields{
-			"hcli":    hcliPath,
-			"yaml":    yamlPath,
-			"step_id": stepID,
+			"hcli":        hcliPath,
+			"yaml":        yamlPath,
+			"step_id":     stepID,
+			"stage_id":    stageID,
+			"pipeline_id": pipelineID,
 		}).Infoln("invoking hcli errors evaluate")
 
 		cmd := exec.CommandContext(ctx, hcliPath, args...)
@@ -173,7 +222,7 @@ func evaluateErrorCategorization(
 			return
 		}
 
-		details, parseErr := parseHcliOutput(output, durationMs, capturedOutputPath, stderrPath)
+		details, parseErr := parseHcliOutput(output, durationMs, stdoutPath, stderrPath)
 		if parseErr != nil {
 			logrus.WithError(parseErr).Warnln("failed to parse hcli errors evaluate output")
 			ch <- result{details: nil}

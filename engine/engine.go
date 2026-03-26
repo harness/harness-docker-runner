@@ -90,7 +90,7 @@ func (e *Engine) Destroy(ctx context.Context) error {
 	return e.docker.Destroy(ctx, cfg)
 }
 
-func (e *Engine) Run(ctx context.Context, step *spec.Step, output io.Writer) (*runtime.State, error) {
+func (e *Engine) Run(ctx context.Context, step *spec.Step, output io.Writer, capture *spec.OutputCapture) (*runtime.State, error) {
 	e.mu.Lock()
 	cfg := e.pipelineConfig
 	e.mu.Unlock()
@@ -125,10 +125,10 @@ func (e *Engine) Run(ctx context.Context, step *spec.Step, output io.Writer) (*r
 	}
 
 	if step.Image != "" {
-		return e.docker.Run(ctx, cfg, step, output)
+		return e.docker.Run(ctx, cfg, step, output, capture)
 	}
 
-	return exec.Run(ctx, step, output)
+	return exec.Run(ctx, step, output, capture)
 }
 
 func createFiles(paths []*spec.File) error {

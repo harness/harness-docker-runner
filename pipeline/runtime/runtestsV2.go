@@ -16,6 +16,7 @@ import (
 
 	"github.com/harness/harness-docker-runner/api"
 	"github.com/harness/harness-docker-runner/engine"
+	"github.com/harness/harness-docker-runner/engine/spec"
 	"github.com/harness/harness-docker-runner/pipeline"
 	leRuntime "github.com/harness/lite-engine/pipeline/runtime"
 	"github.com/harness/lite-engine/ti/callgraph"
@@ -29,7 +30,7 @@ const (
 	outDir = "%s/ti/v2/callgraph/cg/"
 )
 
-func executeRunTestsV2Step(ctx context.Context, engine *engine.Engine, r *api.StartStepRequest, out io.Writer, tiConfig *tiCfg.Cfg) (
+func executeRunTestsV2Step(ctx context.Context, engine *engine.Engine, r *api.StartStepRequest, out io.Writer, tiConfig *tiCfg.Cfg, capture *spec.OutputCapture) (
 	*runtime.State, map[string]string, []byte, []*api.OutputV2, string, *types.TelemetryData, error) {
 	start := time.Now()
 	telemetry := &types.TelemetryData{}
@@ -92,7 +93,7 @@ func executeRunTestsV2Step(ctx context.Context, engine *engine.Engine, r *api.St
 	// Log the command being executed
 	printCommand(step, out)
 
-	exited, err := engine.Run(ctx, step, out)
+	exited, err := engine.Run(ctx, step, out, capture)
 	timeTakenMs := time.Since(start).Milliseconds()
 	logrus.WithField("step_id", r.ID).WithField("stage_id", r.StageRuntimeID).Traceln("completed step runtestv2")
 

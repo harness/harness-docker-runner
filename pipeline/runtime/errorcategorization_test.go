@@ -8,9 +8,22 @@ import (
 	"testing"
 
 	"github.com/harness/harness-docker-runner/api"
+	tiCfg "github.com/harness/lite-engine/ti/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func newTestTiConfig(pipelineID, stageID string) *tiCfg.Cfg {
+	cfg := tiCfg.New(
+		"", "", "", "", "",
+		pipelineID, "", stageID,
+		"", "", "",
+		"", "", "",
+		"", "",
+		false, false, "", "",
+	)
+	return &cfg
+}
 
 func TestIsErrorCategorizationEnabled(t *testing.T) {
 	tests := []struct {
@@ -130,6 +143,119 @@ func TestShouldCategorizeError(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			result := shouldCategorizeError(tc.exitCode, tc.stepErr, tc.envs)
+			assert.Equal(t, tc.expected, result)
+		})
+	}
+}
+
+func TestResolveStageID(t *testing.T) {
+	tests := []struct {
+		name           string
+		stageRuntimeID string
+		envs           map[string]string
+		tiConfig       *tiCfg.Cfg
+		expected       string
+	}{
+		{
+			name:           "env var takes highest priority",
+			stageRuntimeID: "runtime-stage",
+			envs:           map[string]string{"HARNESS_STAGE_ID": "env-stage"},
+			tiConfig:       newTestTiConfig("", "ti-stage"),
+			expected:       "env-stage",
+		},
+		{
+			name:           "tiConfig used when env var missing",
+			stageRuntimeID: "runtime-stage",
+			envs:           map[string]string{},
+			tiConfig:       newTestTiConfig("", "ti-stage"),
+			expected:       "ti-stage",
+		},
+		{
+			name:           "stageRuntimeID fallback when both missing",
+			stageRuntimeID: "runtime-stage",
+			envs:           map[string]string{},
+			tiConfig:       nil,
+			expected:       "runtime-stage",
+		},
+		{
+			name:           "stageRuntimeID fallback when tiConfig has empty stageID",
+			stageRuntimeID: "runtime-stage",
+			envs:           map[string]string{},
+			tiConfig:       newTestTiConfig("", ""),
+			expected:       "runtime-stage",
+		},
+		{
+			name:           "empty env var skipped",
+			stageRuntimeID: "runtime-stage",
+			envs:           map[string]string{"HARNESS_STAGE_ID": ""},
+			tiConfig:       newTestTiConfig("", "ti-stage"),
+			expected:       "ti-stage",
+		},
+		{
+			name:           "nil envs uses tiConfig",
+			stageRuntimeID: "runtime-stage",
+			envs:           nil,
+			tiConfig:       newTestTiConfig("", "ti-stage"),
+			expected:       "ti-stage",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := resolveStageID(tc.stageRuntimeID, tc.envs, tc.tiConfig)
+			assert.Equal(t, tc.expected, result)
+		})
+	}
+}
+
+func TestResolvePipelineID(t *testing.T) {
+	tests := []struct {
+		name     string
+		envs     map[string]string
+		tiConfig *tiCfg.Cfg
+		expected string
+	}{
+		{
+			name:     "env var takes priority",
+			envs:     map[string]string{"HARNESS_PIPELINE_ID": "env-pipeline"},
+			tiConfig: newTestTiConfig("ti-pipeline", ""),
+			expected: "env-pipeline",
+		},
+		{
+			name:     "tiConfig used when env var missing",
+			envs:     map[string]string{},
+			tiConfig: newTestTiConfig("ti-pipeline", ""),
+			expected: "ti-pipeline",
+		},
+		{
+			name:     "empty string when both missing",
+			envs:     map[string]string{},
+			tiConfig: nil,
+			expected: "",
+		},
+		{
+			name:     "empty env var skipped",
+			envs:     map[string]string{"HARNESS_PIPELINE_ID": ""},
+			tiConfig: newTestTiConfig("ti-pipeline", ""),
+			expected: "ti-pipeline",
+		},
+		{
+			name:     "nil envs uses tiConfig",
+			envs:     nil,
+			tiConfig: newTestTiConfig("ti-pipeline", ""),
+			expected: "ti-pipeline",
+		},
+		{
+			name:     "empty tiConfig pipelineID returns empty",
+			envs:     map[string]string{},
+			tiConfig: newTestTiConfig("", ""),
+			expected: "",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := resolvePipelineID(tc.envs, tc.tiConfig)
 			assert.Equal(t, tc.expected, result)
 		})
 	}
@@ -304,10 +430,32 @@ func TestParseHcliOutput(t *testing.T) {
 	})
 }
 
-func TestGetCapturedOutputPath(t *testing.T) {
-	path := getCapturedOutputPath("step-123")
-	assert.Contains(t, path, "step-123-captured-output.log")
-	assert.True(t, filepath.IsAbs(path))
+func TestLogFilePaths(t *testing.T) {
+	t.Run("stdout path follows K8s convention", func(t *testing.T) {
+		path := getStdoutLogFilePath("step-123")
+		assert.Contains(t, path, ".harness-internal/logs/step-123-stdout.log")
+		assert.True(t, filepath.IsAbs(path))
+	})
+
+	t.Run("stderr path follows K8s convention", func(t *testing.T) {
+		path := getStderrLogFilePath("step-123")
+		assert.Contains(t, path, ".harness-internal/logs/step-123-stderr.log")
+		assert.True(t, filepath.IsAbs(path))
+	})
+
+	t.Run("paths are distinct for same step", func(t *testing.T) {
+		stdout := getStdoutLogFilePath("step-abc")
+		stderr := getStderrLogFilePath("step-abc")
+		assert.NotEqual(t, stdout, stderr)
+	})
+
+	t.Run("paths are step-scoped", func(t *testing.T) {
+		p1 := getStdoutLogFilePath("step-1")
+		p2 := getStdoutLogFilePath("step-2")
+		assert.NotEqual(t, p1, p2)
+		assert.Contains(t, p1, "step-1")
+		assert.Contains(t, p2, "step-2")
+	})
 }
 
 func TestConvertStatusWithErrorDetails(t *testing.T) {
@@ -445,9 +593,8 @@ func TestErrorDetailsJSONSerialization(t *testing.T) {
 }
 
 func TestEvaluateErrorCategorization_NoHcli(t *testing.T) {
-	// When hcli is not on PATH, evaluateErrorCategorization should return nil gracefully
 	origPath := os.Getenv("PATH")
-	t.Setenv("PATH", t.TempDir()) // empty dir, no hcli
+	t.Setenv("PATH", t.TempDir())
 
 	tmpDir := t.TempDir()
 	harnessDir := filepath.Join(tmpDir, ".harness")
@@ -455,28 +602,122 @@ func TestEvaluateErrorCategorization_NoHcli(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(harnessDir, "errors.yaml"), []byte("rules: []"), 0644))
 
 	stdoutFile := filepath.Join(tmpDir, "stdout.log")
+	stderrFile := filepath.Join(tmpDir, "stderr.log")
 	require.NoError(t, os.WriteFile(stdoutFile, []byte("error output"), 0644))
+	require.NoError(t, os.WriteFile(stderrFile, []byte(""), 0644))
 
 	result := evaluateErrorCategorization(
-		tmpDir, stdoutFile, 1, "step-1", "stage-1",
+		tmpDir, stdoutFile, stderrFile, 1, "step-1", "stage-1",
 		map[string]string{"CI_CUSTOM_ERROR_CATEGORIZATION": "true"},
+		nil,
 	)
 
 	assert.Nil(t, result)
 
-	// Restore PATH
 	os.Setenv("PATH", origPath)
 }
 
 func TestEvaluateErrorCategorization_NoErrorsYAML(t *testing.T) {
 	tmpDir := t.TempDir()
 	stdoutFile := filepath.Join(tmpDir, "stdout.log")
+	stderrFile := filepath.Join(tmpDir, "stderr.log")
 	require.NoError(t, os.WriteFile(stdoutFile, []byte("error output"), 0644))
+	require.NoError(t, os.WriteFile(stderrFile, []byte(""), 0644))
 
 	result := evaluateErrorCategorization(
-		tmpDir, stdoutFile, 1, "step-1", "stage-1",
+		tmpDir, stdoutFile, stderrFile, 1, "step-1", "stage-1",
 		map[string]string{"CI_CUSTOM_ERROR_CATEGORIZATION": "true"},
+		nil,
 	)
 
 	assert.Nil(t, result)
+}
+
+func TestEvaluateErrorCategorization_WithTiConfig(t *testing.T) {
+	origPath := os.Getenv("PATH")
+	t.Setenv("PATH", t.TempDir())
+
+	tmpDir := t.TempDir()
+	harnessDir := filepath.Join(tmpDir, ".harness")
+	require.NoError(t, os.MkdirAll(harnessDir, 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(harnessDir, "errors.yaml"), []byte("rules: []"), 0644))
+
+	stdoutFile := filepath.Join(tmpDir, "stdout.log")
+	stderrFile := filepath.Join(tmpDir, "stderr.log")
+	require.NoError(t, os.WriteFile(stdoutFile, []byte("error output"), 0644))
+	require.NoError(t, os.WriteFile(stderrFile, []byte("stderr output"), 0644))
+
+	ti := newTestTiConfig("my-pipeline", "my-stage")
+
+	result := evaluateErrorCategorization(
+		tmpDir, stdoutFile, stderrFile, 1, "step-1", "fallback-stage",
+		map[string]string{},
+		ti,
+	)
+
+	// hcli not on PATH, so result is nil; but the function should not panic
+	assert.Nil(t, result)
+
+	os.Setenv("PATH", origPath)
+}
+
+func TestCleanupLogFiles(t *testing.T) {
+	t.Run("deletes files that exist", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		stdoutPath := filepath.Join(tmpDir, "step-1-stdout.log")
+		stderrPath := filepath.Join(tmpDir, "step-1-stderr.log")
+		require.NoError(t, os.WriteFile(stdoutPath, []byte("stdout data"), 0644))
+		require.NoError(t, os.WriteFile(stderrPath, []byte("stderr data"), 0644))
+
+		cleanupLogFiles(stdoutPath, stderrPath)
+
+		_, err := os.Stat(stdoutPath)
+		assert.True(t, os.IsNotExist(err), "stdout file should be deleted")
+		_, err = os.Stat(stderrPath)
+		assert.True(t, os.IsNotExist(err), "stderr file should be deleted")
+	})
+
+	t.Run("idempotent - second call on already-deleted files is silent", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		stdoutPath := filepath.Join(tmpDir, "step-2-stdout.log")
+		stderrPath := filepath.Join(tmpDir, "step-2-stderr.log")
+		require.NoError(t, os.WriteFile(stdoutPath, []byte("data"), 0644))
+		require.NoError(t, os.WriteFile(stderrPath, []byte("data"), 0644))
+
+		cleanupLogFiles(stdoutPath, stderrPath)
+		// Second call should not panic or log errors
+		cleanupLogFiles(stdoutPath, stderrPath)
+
+		_, err := os.Stat(stdoutPath)
+		assert.True(t, os.IsNotExist(err))
+	})
+
+	t.Run("silent on files that never existed", func(t *testing.T) {
+		// Should not panic when files were never created
+		cleanupLogFiles("/nonexistent/path/stdout.log", "/nonexistent/path/stderr.log")
+	})
+
+	t.Run("handles partial existence - only stdout exists", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		stdoutPath := filepath.Join(tmpDir, "step-3-stdout.log")
+		stderrPath := filepath.Join(tmpDir, "step-3-stderr.log")
+		require.NoError(t, os.WriteFile(stdoutPath, []byte("stdout only"), 0644))
+
+		cleanupLogFiles(stdoutPath, stderrPath)
+
+		_, err := os.Stat(stdoutPath)
+		assert.True(t, os.IsNotExist(err), "stdout file should be deleted")
+	})
+
+	t.Run("handles partial existence - only stderr exists", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		stdoutPath := filepath.Join(tmpDir, "step-4-stdout.log")
+		stderrPath := filepath.Join(tmpDir, "step-4-stderr.log")
+		require.NoError(t, os.WriteFile(stderrPath, []byte("stderr only"), 0644))
+
+		cleanupLogFiles(stdoutPath, stderrPath)
+
+		_, err := os.Stat(stderrPath)
+		assert.True(t, os.IsNotExist(err), "stderr file should be deleted")
+	})
 }

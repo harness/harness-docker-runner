@@ -13,6 +13,7 @@ import (
 	"github.com/drone/runner-go/pipeline/runtime"
 	"github.com/harness/harness-docker-runner/api"
 	"github.com/harness/harness-docker-runner/engine"
+	"github.com/harness/harness-docker-runner/engine/spec"
 	"github.com/harness/harness-docker-runner/pipeline"
 	"github.com/harness/lite-engine/ti/callgraph"
 	tiCfg "github.com/harness/lite-engine/ti/config"
@@ -27,7 +28,7 @@ const (
 	cgDir = "%s/ti/callgraph/" // path where callgraph files will be generated
 )
 
-func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.StartStepRequest, out io.Writer, tiConfig *tiCfg.Cfg) (
+func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.StartStepRequest, out io.Writer, tiConfig *tiCfg.Cfg, capture *spec.OutputCapture) (
 	*runtime.State, map[string]string, []byte, []*api.OutputV2, string, *types.TelemetryData, error) {
 	start := time.Now()
 	telemetry := &types.TelemetryData{}
@@ -77,7 +78,7 @@ func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.Start
 	// Log the command being executed
 	printCommand(step, out)
 
-	exited, err := engine.Run(ctx, step, out)
+	exited, err := engine.Run(ctx, step, out, capture)
 	timeTakenMs := time.Since(start).Milliseconds()
 	if _, rerr := report.ParseAndUploadTests(ctx, r.TestReport, r.WorkingDir, step.Name, log, time.Now(), tiConfig, &telemetry.TestIntelligenceMetaData, r.Envs); rerr != nil {
 		log.WithError(rerr).Errorln("failed to upload report")
