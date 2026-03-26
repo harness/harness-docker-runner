@@ -89,7 +89,7 @@ func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.Start
 	}
 
 	// Parse and upload savings to TI
-	optimizationState = savings.ParseAndUploadSavings(ctx, r.WorkingDir, log, step.Name, checkStepSuccess(exited, err), timeTakenMs, tiConfig, r.Envs, telemetry)
+	optimizationState = savings.ParseAndUploadSavings(ctx, r.WorkingDir, log, step.Name, checkStepSuccess(exited, err), timeTakenMs, tiConfig, r.Envs, telemetry, r.Kind.String())
 
 	summaryOutputs := make(map[string]string)
 	reportSaveErr := report.SaveReportSummaryToOutputs(ctx, tiConfig, step.Name, summaryOutputs, log, r.Envs)
