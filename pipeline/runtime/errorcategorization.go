@@ -147,6 +147,9 @@ func evaluateErrorCategorization(
 	stageID := resolveStageID(stageRuntimeID, envs, tiConfig)
 	pipelineID := resolvePipelineID(envs, tiConfig)
 
+	ctx, cancel := context.WithTimeout(context.Background(), evaluationTimeout)
+	defer cancel()
+
 	type result struct {
 		details *api.ErrorDetails
 	}
@@ -178,9 +181,6 @@ func evaluateErrorCategorization(
 			logrus.WithError(err).Warnln("failed to create cache dir for error categorization")
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), evaluationTimeout)
-		defer cancel()
-
 		args := []string{
 			"errors", "evaluate",
 			"--yaml-path", yamlPath,
@@ -207,7 +207,10 @@ func evaluateErrorCategorization(
 		durationMs := time.Since(start).Milliseconds()
 
 		if ctx.Err() == context.DeadlineExceeded {
-			logrus.WithField("step_id", stepID).Warnln("error categorization timed out")
+			logrus.WithFields(logrus.Fields{
+				"step_id":     stepID,
+				"duration_ms": durationMs,
+			}).Warnln("error categorization timed out")
 			ch <- result{details: &api.ErrorDetails{
 				TimedOut:             true,
 				EvaluationDurationMs: durationMs,
@@ -217,7 +220,10 @@ func evaluateErrorCategorization(
 		}
 
 		if err != nil {
-			logrus.WithError(err).WithField("step_id", stepID).Warnln("hcli errors evaluate failed")
+			logrus.WithError(err).WithFields(logrus.Fields{
+				"step_id":     stepID,
+				"duration_ms": durationMs,
+			}).Warnln("hcli errors evaluate failed")
 			ch <- result{details: nil}
 			return
 		}
@@ -229,14 +235,34 @@ func evaluateErrorCategorization(
 			return
 		}
 
+		if details != nil {
+			logrus.WithFields(logrus.Fields{
+				"step_id":      stepID,
+				"duration_ms":  durationMs,
+				"matched_rule": details.MatchedRule,
+				"failure_type": details.FailureType,
+				"stdout_bytes": details.StdoutSizeBytes,
+				"stderr_bytes": details.StderrSizeBytes,
+				"rule_count":   details.RuleCount,
+			}).Infoln("error categorization completed")
+		} else {
+			logrus.WithFields(logrus.Fields{
+				"step_id":     stepID,
+				"duration_ms": durationMs,
+			}).Infoln("error categorization completed with no match")
+		}
+
 		ch <- result{details: details}
 	}()
 
 	select {
 	case res := <-ch:
 		return res.details
-	case <-time.After(evaluationTimeout + 2*time.Second):
-		logrus.WithField("step_id", stepID).Warnln("error categorization safety timeout exceeded")
+	case <-ctx.Done():
+		logrus.WithFields(logrus.Fields{
+			"step_id":     stepID,
+			"duration_ms": time.Since(start).Milliseconds(),
+		}).Warnln("error categorization timed out waiting for result")
 		return &api.ErrorDetails{
 			TimedOut:             true,
 			EvaluationDurationMs: time.Since(start).Milliseconds(),
