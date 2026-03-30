@@ -292,15 +292,15 @@ func evaluateErrorCategorization(
 
 // hcliEvaluateOutput represents the JSON output from hcli errors evaluate.
 type hcliEvaluateOutput struct {
-	FailureType    string `json:"failure_type"`
-	FailureSubType string `json:"failure_sub_type"`
-	Message        string `json:"message"`
-	MatchedRule    string `json:"matched_rule"`
-	Source         string `json:"source"`
-	RuleCount      int    `json:"rule_count"`
-	Matched        bool   `json:"matched"`
-	TimedOut       bool   `json:"timed_out"`
-	Error          string `json:"error"`
+	Matched     bool   `json:"matched"`
+	Category    string `json:"category,omitempty"`
+	Subcategory string `json:"subcategory,omitempty"`
+	Message     string `json:"message,omitempty"`
+	MatchedRule string `json:"matched_rule,omitempty"`
+	Source      string `json:"source,omitempty"`
+	RuleCount   int32  `json:"rule_count,omitempty"`
+	TimedOut    bool   `json:"timed_out,omitempty"`
+	Error       string `json:"error,omitempty"`
 }
 
 func parseHcliOutput(output []byte, durationMs int64, stdoutPath, stderrPath string) (*api.ErrorDetails, error) {
@@ -330,8 +330,8 @@ func parseHcliOutput(output []byte, durationMs int64, stdoutPath, stderrPath str
 	}
 
 	return &api.ErrorDetails{
-		FailureType:          hcliOut.FailureType,
-		FailureSubType:       hcliOut.FailureSubType,
+		FailureType:          hcliOut.Category,
+		FailureSubType:       hcliOut.Subcategory,
 		Message:              hcliOut.Message,
 		MatchedRule:          hcliOut.MatchedRule,
 		Source:               hcliOut.Source,

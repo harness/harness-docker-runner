@@ -252,13 +252,13 @@ func TestParseHcliOutput(t *testing.T) {
 
 	t.Run("parses valid hcli JSON output", func(t *testing.T) {
 		hcliOut := hcliEvaluateOutput{
-			FailureType:    "APPLICATION_FAILURE",
-			FailureSubType: "DEPENDENCY_RESOLUTION_FAILURE",
-			Message:        "npm install failed: package not found",
-			MatchedRule:    "npm-resolution-errors",
-			Source:         "custom",
-			RuleCount:      5,
-			Matched:        true,
+			Category:    "APPLICATION_FAILURE",
+			Subcategory: "DEPENDENCY_RESOLUTION_FAILURE",
+			Message:     "npm install failed: package not found",
+			MatchedRule: "npm-resolution-errors",
+			Source:      "custom",
+			RuleCount:   5,
+			Matched:     true,
 		}
 		output, err := json.Marshal(hcliOut)
 		require.NoError(t, err)
@@ -273,7 +273,7 @@ func TestParseHcliOutput(t *testing.T) {
 		assert.Equal(t, "npm-resolution-errors", details.MatchedRule)
 		assert.Equal(t, "custom", details.Source)
 		assert.Equal(t, int64(42), details.EvaluationDurationMs)
-		assert.Equal(t, 5, details.RuleCount)
+		assert.Equal(t, int32(5), details.RuleCount)
 		assert.False(t, details.TimedOut)
 		assert.Equal(t, int64(24), details.StdoutSizeBytes) // len("some stdout content here")
 		assert.Equal(t, int64(3), details.StderrSizeBytes)  // len("err")
@@ -306,10 +306,10 @@ func TestParseHcliOutput(t *testing.T) {
 
 	t.Run("handles missing log files gracefully", func(t *testing.T) {
 		hcliOut := hcliEvaluateOutput{
-			FailureType: "CONNECTIVITY_FAILURE",
-			Message:     "connection refused",
-			Source:      "custom",
-			Matched:     true,
+			Category: "CONNECTIVITY_FAILURE",
+			Message:  "connection refused",
+			Source:   "custom",
+			Matched:  true,
 		}
 		output, err := json.Marshal(hcliOut)
 		require.NoError(t, err)
@@ -344,7 +344,7 @@ func TestParseHcliOutput(t *testing.T) {
 		assert.NoError(t, err)
 		require.NotNil(t, details)
 		assert.True(t, details.TimedOut)
-		assert.Equal(t, 3, details.RuleCount)
+		assert.Equal(t, int32(3), details.RuleCount)
 	})
 
 	t.Run("logs hcli error field without failing", func(t *testing.T) {
@@ -409,7 +409,7 @@ func TestConvertStatusWithErrorDetails(t *testing.T) {
 		assert.Equal(t, "build-errors", resp.ErrorDetails.MatchedRule)
 		assert.Equal(t, "custom", resp.ErrorDetails.Source)
 		assert.Equal(t, int64(150), resp.ErrorDetails.EvaluationDurationMs)
-		assert.Equal(t, 3, resp.ErrorDetails.RuleCount)
+		assert.Equal(t, int32(3), resp.ErrorDetails.RuleCount)
 	})
 
 	t.Run("nil error details preserved as nil", func(t *testing.T) {
@@ -444,15 +444,15 @@ func TestErrorDetailsJSONSerialization(t *testing.T) {
 		var parsed map[string]interface{}
 		require.NoError(t, json.Unmarshal(data, &parsed))
 
-		assert.Equal(t, "CONNECTIVITY_FAILURE", parsed["failure_type"])
-		assert.Equal(t, "SOCKET_CONNECTION_FAILURE", parsed["failure_sub_type"])
+		assert.Equal(t, "CONNECTIVITY_FAILURE", parsed["failureType"])
+		assert.Equal(t, "SOCKET_CONNECTION_FAILURE", parsed["failureSubType"])
 		assert.Equal(t, "Could not reach registry.npmjs.org", parsed["message"])
-		assert.Equal(t, "npm-connectivity", parsed["matched_rule"])
+		assert.Equal(t, "npm-connectivity", parsed["matchedRule"])
 		assert.Equal(t, "custom", parsed["source"])
-		assert.Equal(t, float64(2500), parsed["evaluation_duration_ms"])
-		assert.Equal(t, float64(1024), parsed["stdout_size_bytes"])
-		assert.Equal(t, float64(512), parsed["stderr_size_bytes"])
-		assert.Equal(t, float64(7), parsed["rule_count"])
+		assert.Equal(t, float64(2500), parsed["evaluationDurationMs"])
+		assert.Equal(t, float64(1024), parsed["stdoutSizeBytes"])
+		assert.Equal(t, float64(512), parsed["stderrSizeBytes"])
+		assert.Equal(t, float64(7), parsed["ruleCount"])
 	})
 
 	t.Run("omits empty fields", func(t *testing.T) {
@@ -467,12 +467,12 @@ func TestErrorDetailsJSONSerialization(t *testing.T) {
 		var parsed map[string]interface{}
 		require.NoError(t, json.Unmarshal(data, &parsed))
 
-		_, hasFailureType := parsed["failure_type"]
-		assert.False(t, hasFailureType, "empty failure_type should be omitted")
+		_, hasFailureType := parsed["failureType"]
+		assert.False(t, hasFailureType, "empty failureType should be omitted")
 		_, hasMessage := parsed["message"]
 		assert.False(t, hasMessage, "empty message should be omitted")
 
-		assert.Equal(t, true, parsed["timed_out"])
+		assert.Equal(t, true, parsed["timedOut"])
 		assert.Equal(t, "custom", parsed["source"])
 	})
 
@@ -496,7 +496,7 @@ func TestErrorDetailsJSONSerialization(t *testing.T) {
 
 		errorDetails, ok := parsed["error_details"].(map[string]interface{})
 		require.True(t, ok, "error_details should be a JSON object")
-		assert.Equal(t, "APPLICATION_FAILURE", errorDetails["failure_type"])
+		assert.Equal(t, "APPLICATION_FAILURE", errorDetails["failureType"])
 		assert.Equal(t, "test failure", errorDetails["message"])
 		assert.Equal(t, "custom", errorDetails["source"])
 	})

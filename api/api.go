@@ -178,16 +178,16 @@ type (
 	}
 
 	ErrorDetails struct {
-		FailureType          string `json:"failure_type,omitempty"`
-		FailureSubType       string `json:"failure_sub_type,omitempty"`
+		FailureType          string `json:"failureType,omitempty"`
+		FailureSubType       string `json:"failureSubType,omitempty"`
 		Message              string `json:"message,omitempty"`
-		MatchedRule          string `json:"matched_rule,omitempty"`
+		MatchedRule          string `json:"matchedRule,omitempty"`
 		Source               string `json:"source,omitempty"`
-		EvaluationDurationMs int64  `json:"evaluation_duration_ms,omitempty"`
-		StdoutSizeBytes      int64  `json:"stdout_size_bytes,omitempty"`
-		StderrSizeBytes      int64  `json:"stderr_size_bytes,omitempty"`
-		RuleCount            int    `json:"rule_count,omitempty"`
-		TimedOut             bool   `json:"timed_out,omitempty"`
+		EvaluationDurationMs int64  `json:"evaluationDurationMs,omitempty"`
+		StdoutSizeBytes      int64  `json:"stdoutSizeBytes,omitempty"`
+		StderrSizeBytes      int64  `json:"stderrSizeBytes,omitempty"`
+		RuleCount            int32  `json:"ruleCount,omitempty"`
+		TimedOut             bool   `json:"timedOut,omitempty"`
 	}
 
 	StreamOutputRequest struct {
