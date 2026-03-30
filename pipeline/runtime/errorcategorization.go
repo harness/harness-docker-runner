@@ -9,10 +9,10 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/harness/harness-docker-runner/api"
+	"github.com/harness/harness-docker-runner/engine"
 	"github.com/harness/harness-docker-runner/pipeline"
 	tiCfg "github.com/harness/lite-engine/ti/config"
 	"github.com/sirupsen/logrus"
@@ -82,17 +82,12 @@ func resolvePipelineID(envs map[string]string, tiConfig *tiCfg.Cfg) string {
 	return ""
 }
 
-func isErrorCategorizationEnabled(envs map[string]string) bool {
-	val, ok := envs[errorCategorizationFF]
-	return ok && strings.EqualFold(val, "true")
-}
-
-func shouldCategorizeError(exitCode int, stepErr error, envs map[string]string) bool {
+func shouldCategorizeError(exitCode int, stepErr error, eng *engine.Engine) bool {
 	hasFailed := stepErr != nil || exitCode != 0
 	if !hasFailed {
 		return false
 	}
-	return isErrorCategorizationEnabled(envs)
+	return IsFeatureFlagEnabled(errorCategorizationFF, eng, nil)
 }
 
 func resolveHcliBinaryPath() string {
@@ -108,10 +103,24 @@ func resolveHcliBinaryPath() string {
 	return path
 }
 
-func resolveErrorsYAMLPath(workingDir string, envs map[string]string) string {
-	if envPath, ok := envs[errorsYAMLPathEnv]; ok && envPath != "" {
+func resolveErrorsYAMLPath(workingDir string, envs map[string]string, eng *engine.Engine) string {
+	envPath := ""
+	if v, ok := envs[errorsYAMLPathEnv]; ok && v != "" {
+		envPath = v
+	} else if eng != nil {
+		if v, ok := eng.GetPipelineEnv(errorsYAMLPathEnv); ok && v != "" {
+			envPath = v
+		}
+	}
+	if envPath != "" {
+		// Try absolute first
 		if _, err := os.Stat(envPath); err == nil {
 			return envPath
+		}
+		// Try relative to workspace
+		relative := filepath.Join(workingDir, envPath)
+		if _, err := os.Stat(relative); err == nil {
+			return relative
 		}
 		logrus.WithField("path", envPath).Warnln("HARNESS_ERRORS_YAML_PATH set but file not found")
 	}
@@ -141,6 +150,7 @@ func evaluateErrorCategorization(
 	stageRuntimeID string,
 	envs map[string]string,
 	tiConfig *tiCfg.Cfg,
+	eng *engine.Engine,
 ) *api.ErrorDetails {
 	start := time.Now()
 
@@ -169,7 +179,7 @@ func evaluateErrorCategorization(
 			return
 		}
 
-		yamlPath := resolveErrorsYAMLPath(workingDir, envs)
+		yamlPath := resolveErrorsYAMLPath(workingDir, envs, eng)
 		if yamlPath == "" {
 			logrus.Infoln("no errors.yaml found, skipping error categorization")
 			ch <- result{details: nil}

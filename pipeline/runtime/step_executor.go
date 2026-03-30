@@ -100,11 +100,11 @@ func (e *StepExecutor) StartStep(ctx context.Context, r *api.StartStepRequest, s
 		}
 
 		var errorDetails *api.ErrorDetails
-		if shouldCategorizeError(exitCode, stepErr, r.StartStepRequestConfig.Envs) {
+		if shouldCategorizeError(exitCode, stepErr, e.engine) {
 			errorDetails = evaluateErrorCategorization(
 				r.WorkingDir, stdoutLogPath, stderrLogPath,
 				exitCode, r.ID, r.StageRuntimeID,
-				r.StartStepRequestConfig.Envs, tiConfig,
+				r.StartStepRequestConfig.Envs, tiConfig, e.engine,
 			)
 		}
 
@@ -304,7 +304,7 @@ func (e *StepExecutor) executeStep(r *api.StartStepRequest, secrets []string, cl
 	// Create per-step stdout/stderr capture files for error categorization.
 	// Files persist after this function returns so the caller can pass them to hcli.
 	var capture *spec.OutputCapture
-	if isErrorCategorizationEnabled(r.StartStepRequestConfig.Envs) {
+	if IsFeatureFlagEnabled(errorCategorizationFF, e.engine, nil) {
 		ensureLogDir()
 		stdoutFile, serr := os.Create(getStdoutLogFilePath(r.ID))
 		stderrFile, eerr := os.Create(getStderrLogFilePath(r.ID))

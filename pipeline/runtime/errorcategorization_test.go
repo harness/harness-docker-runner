@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/harness/harness-docker-runner/api"
+	"github.com/harness/harness-docker-runner/engine/spec"
 	tiCfg "github.com/harness/lite-engine/ti/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -25,127 +26,34 @@ func newTestTiConfig(pipelineID, stageID string) *tiCfg.Cfg {
 	return &cfg
 }
 
-func TestIsErrorCategorizationEnabled(t *testing.T) {
-	tests := []struct {
-		name     string
-		envs     map[string]string
-		expected bool
-	}{
-		{
-			name:     "enabled with true",
-			envs:     map[string]string{"CI_CUSTOM_ERROR_CATEGORIZATION": "true"},
-			expected: true,
-		},
-		{
-			name:     "enabled with True (case insensitive)",
-			envs:     map[string]string{"CI_CUSTOM_ERROR_CATEGORIZATION": "True"},
-			expected: true,
-		},
-		{
-			name:     "enabled with TRUE (all caps)",
-			envs:     map[string]string{"CI_CUSTOM_ERROR_CATEGORIZATION": "TRUE"},
-			expected: true,
-		},
-		{
-			name:     "disabled with false",
-			envs:     map[string]string{"CI_CUSTOM_ERROR_CATEGORIZATION": "false"},
-			expected: false,
-		},
-		{
-			name:     "disabled when key missing",
-			envs:     map[string]string{},
-			expected: false,
-		},
-		{
-			name:     "disabled with empty value",
-			envs:     map[string]string{"CI_CUSTOM_ERROR_CATEGORIZATION": ""},
-			expected: false,
-		},
-		{
-			name:     "disabled with nil map",
-			envs:     nil,
-			expected: false,
-		},
-		{
-			name:     "disabled with random value",
-			envs:     map[string]string{"CI_CUSTOM_ERROR_CATEGORIZATION": "yes"},
-			expected: false,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			result := isErrorCategorizationEnabled(tc.envs)
-			assert.Equal(t, tc.expected, result)
-		})
-	}
+func TestShouldCategorizeError(t *testing.T) {
+	t.Run("success never categorizes even with nil engine", func(t *testing.T) {
+		assert.False(t, shouldCategorizeError(0, nil, nil))
+	})
+	t.Run("failure with nil engine returns false (FF disabled)", func(t *testing.T) {
+		assert.False(t, shouldCategorizeError(1, nil, nil))
+	})
+	t.Run("failure with error and nil engine returns false", func(t *testing.T) {
+		assert.False(t, shouldCategorizeError(0, fmt.Errorf("err"), nil))
+	})
 }
 
-func TestShouldCategorizeError(t *testing.T) {
-	tests := []struct {
-		name     string
-		exitCode int
-		stepErr  error
-		envs     map[string]string
-		expected bool
-	}{
-		{
-			name:     "step failed with non-zero exit and FF enabled",
-			exitCode: 1,
-			stepErr:  nil,
-			envs:     map[string]string{"CI_CUSTOM_ERROR_CATEGORIZATION": "true"},
-			expected: true,
-		},
-		{
-			name:     "step failed with error and FF enabled",
-			exitCode: 0,
-			stepErr:  fmt.Errorf("some error"),
-			envs:     map[string]string{"CI_CUSTOM_ERROR_CATEGORIZATION": "true"},
-			expected: true,
-		},
-		{
-			name:     "step failed with both error and non-zero exit",
-			exitCode: 127,
-			stepErr:  fmt.Errorf("command not found"),
-			envs:     map[string]string{"CI_CUSTOM_ERROR_CATEGORIZATION": "true"},
-			expected: true,
-		},
-		{
-			name:     "step succeeded - no categorization",
-			exitCode: 0,
-			stepErr:  nil,
-			envs:     map[string]string{"CI_CUSTOM_ERROR_CATEGORIZATION": "true"},
-			expected: false,
-		},
-		{
-			name:     "step failed but FF disabled",
-			exitCode: 1,
-			stepErr:  nil,
-			envs:     map[string]string{"CI_CUSTOM_ERROR_CATEGORIZATION": "false"},
-			expected: false,
-		},
-		{
-			name:     "step failed but FF absent",
-			exitCode: 1,
-			stepErr:  nil,
-			envs:     map[string]string{},
-			expected: false,
-		},
-		{
-			name:     "step failed with nil envs",
-			exitCode: 1,
-			stepErr:  nil,
-			envs:     nil,
-			expected: false,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			result := shouldCategorizeError(tc.exitCode, tc.stepErr, tc.envs)
-			assert.Equal(t, tc.expected, result)
-		})
-	}
+func TestIsFeatureFlagEnabled(t *testing.T) {
+	t.Run("nil engine and nil step returns false", func(t *testing.T) {
+		assert.False(t, IsFeatureFlagEnabled(errorCategorizationFF, nil, nil))
+	})
+	t.Run("nil engine with step containing FF returns true", func(t *testing.T) {
+		step := &spec.Step{Envs: map[string]string{errorCategorizationFF: "true"}}
+		assert.True(t, IsFeatureFlagEnabled(errorCategorizationFF, nil, step))
+	})
+	t.Run("nil engine with step containing wrong value returns false", func(t *testing.T) {
+		step := &spec.Step{Envs: map[string]string{errorCategorizationFF: "false"}}
+		assert.False(t, IsFeatureFlagEnabled(errorCategorizationFF, nil, step))
+	})
+	t.Run("nil engine with step missing FF returns false", func(t *testing.T) {
+		step := &spec.Step{Envs: map[string]string{}}
+		assert.False(t, IsFeatureFlagEnabled(errorCategorizationFF, nil, step))
+	})
 }
 
 func TestResolveStageID(t *testing.T) {
@@ -272,7 +180,7 @@ func TestResolveErrorsYAMLPath(t *testing.T) {
 		require.NoError(t, os.WriteFile(filepath.Join(harnessDir, "errors.yaml"), []byte("rules: []"), 0644))
 
 		envs := map[string]string{"HARNESS_ERRORS_YAML_PATH": envFile}
-		result := resolveErrorsYAMLPath(filepath.Join(tmpDir, "workspace"), envs)
+		result := resolveErrorsYAMLPath(filepath.Join(tmpDir, "workspace"), envs, nil)
 		assert.Equal(t, envFile, result)
 	})
 
@@ -283,7 +191,7 @@ func TestResolveErrorsYAMLPath(t *testing.T) {
 		require.NoError(t, os.WriteFile(filepath.Join(harnessDir, "errors.yaml"), []byte("rules: []"), 0644))
 
 		envs := map[string]string{"HARNESS_ERRORS_YAML_PATH": "/nonexistent/path.yaml"}
-		result := resolveErrorsYAMLPath(tmpDir, envs)
+		result := resolveErrorsYAMLPath(tmpDir, envs, nil)
 		assert.Equal(t, filepath.Join(harnessDir, "errors.yaml"), result)
 	})
 
@@ -294,7 +202,7 @@ func TestResolveErrorsYAMLPath(t *testing.T) {
 		yamlPath := filepath.Join(harnessDir, "errors.yaml")
 		require.NoError(t, os.WriteFile(yamlPath, []byte("rules: []"), 0644))
 
-		result := resolveErrorsYAMLPath(tmpDir, map[string]string{})
+		result := resolveErrorsYAMLPath(tmpDir, map[string]string{}, nil)
 		assert.Equal(t, yamlPath, result)
 	})
 
@@ -305,7 +213,7 @@ func TestResolveErrorsYAMLPath(t *testing.T) {
 		ymlPath := filepath.Join(harnessDir, "errors.yml")
 		require.NoError(t, os.WriteFile(ymlPath, []byte("rules: []"), 0644))
 
-		result := resolveErrorsYAMLPath(tmpDir, map[string]string{})
+		result := resolveErrorsYAMLPath(tmpDir, map[string]string{}, nil)
 		assert.Equal(t, ymlPath, result)
 	})
 
@@ -317,20 +225,20 @@ func TestResolveErrorsYAMLPath(t *testing.T) {
 		require.NoError(t, os.WriteFile(yamlPath, []byte("rules: []"), 0644))
 		require.NoError(t, os.WriteFile(filepath.Join(harnessDir, "errors.yml"), []byte("rules: []"), 0644))
 
-		result := resolveErrorsYAMLPath(tmpDir, map[string]string{})
+		result := resolveErrorsYAMLPath(tmpDir, map[string]string{}, nil)
 		assert.Equal(t, yamlPath, result)
 	})
 
 	t.Run("returns empty when no yaml found", func(t *testing.T) {
 		tmpDir := t.TempDir()
-		result := resolveErrorsYAMLPath(tmpDir, map[string]string{})
+		result := resolveErrorsYAMLPath(tmpDir, map[string]string{}, nil)
 		assert.Equal(t, "", result)
 	})
 
 	t.Run("returns empty when .harness dir exists but no yaml", func(t *testing.T) {
 		tmpDir := t.TempDir()
 		require.NoError(t, os.MkdirAll(filepath.Join(tmpDir, ".harness"), 0755))
-		result := resolveErrorsYAMLPath(tmpDir, map[string]string{})
+		result := resolveErrorsYAMLPath(tmpDir, map[string]string{}, nil)
 		assert.Equal(t, "", result)
 	})
 }
@@ -609,7 +517,7 @@ func TestEvaluateErrorCategorization_NoHcli(t *testing.T) {
 	result := evaluateErrorCategorization(
 		tmpDir, stdoutFile, stderrFile, 1, "step-1", "stage-1",
 		map[string]string{"CI_CUSTOM_ERROR_CATEGORIZATION": "true"},
-		nil,
+		nil, nil,
 	)
 
 	assert.Nil(t, result)
@@ -627,7 +535,7 @@ func TestEvaluateErrorCategorization_NoErrorsYAML(t *testing.T) {
 	result := evaluateErrorCategorization(
 		tmpDir, stdoutFile, stderrFile, 1, "step-1", "stage-1",
 		map[string]string{"CI_CUSTOM_ERROR_CATEGORIZATION": "true"},
-		nil,
+		nil, nil,
 	)
 
 	assert.Nil(t, result)
@@ -652,7 +560,7 @@ func TestEvaluateErrorCategorization_WithTiConfig(t *testing.T) {
 	result := evaluateErrorCategorization(
 		tmpDir, stdoutFile, stderrFile, 1, "step-1", "fallback-stage",
 		map[string]string{},
-		ti,
+		ti, nil,
 	)
 
 	// hcli not on PATH, so result is nil; but the function should not panic

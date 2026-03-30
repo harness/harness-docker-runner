@@ -214,3 +214,11 @@ func (e *Engine) IsFeatureFlagEnabled(featureFlagName string) bool {
 	val, ok := e.pipelineConfig.Envs[featureFlagName]
 	return ok && val == trueValue
 }
+
+func (e *Engine) GetPipelineEnv(key string) (string, bool) {
+	if e == nil || e.pipelineConfig == nil || e.pipelineConfig.Envs == nil {
+		return "", false
+	}
+	val, ok := e.pipelineConfig.Envs[key]
+	return val, ok
+}
