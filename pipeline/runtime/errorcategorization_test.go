@@ -258,6 +258,7 @@ func TestParseHcliOutput(t *testing.T) {
 			MatchedRule:    "npm-resolution-errors",
 			Source:         "custom",
 			RuleCount:      5,
+			Matched:        true,
 		}
 		output, err := json.Marshal(hcliOut)
 		require.NoError(t, err)
@@ -308,6 +309,7 @@ func TestParseHcliOutput(t *testing.T) {
 			FailureType: "CONNECTIVITY_FAILURE",
 			Message:     "connection refused",
 			Source:      "custom",
+			Matched:     true,
 		}
 		output, err := json.Marshal(hcliOut)
 		require.NoError(t, err)
@@ -321,20 +323,36 @@ func TestParseHcliOutput(t *testing.T) {
 		assert.Equal(t, int64(0), details.StderrSizeBytes)
 	})
 
-	t.Run("returns details when only message is set", func(t *testing.T) {
-		output := []byte(`{"message": "something went wrong"}`)
+	t.Run("returns details when matched is true", func(t *testing.T) {
+		output := []byte(`{"message": "something went wrong", "matched": true}`)
 		details, err := parseHcliOutput(output, 1, stdoutPath, stderrPath)
 		assert.NoError(t, err)
 		require.NotNil(t, details)
 		assert.Equal(t, "something went wrong", details.Message)
 	})
 
-	t.Run("returns details when only matched_rule is set", func(t *testing.T) {
-		output := []byte(`{"matched_rule": "my-rule"}`)
+	t.Run("returns nil when matched is false and not timed out", func(t *testing.T) {
+		output := []byte(`{"matched_rule": "my-rule", "matched": false}`)
+		details, err := parseHcliOutput(output, 1, stdoutPath, stderrPath)
+		assert.NoError(t, err)
+		assert.Nil(t, details)
+	})
+
+	t.Run("returns details when timed_out is true", func(t *testing.T) {
+		output := []byte(`{"timed_out": true, "rule_count": 3}`)
+		details, err := parseHcliOutput(output, 50, stdoutPath, stderrPath)
+		assert.NoError(t, err)
+		require.NotNil(t, details)
+		assert.True(t, details.TimedOut)
+		assert.Equal(t, 3, details.RuleCount)
+	})
+
+	t.Run("logs hcli error field without failing", func(t *testing.T) {
+		output := []byte(`{"error": "partial evaluation", "matched": true, "matched_rule": "r1"}`)
 		details, err := parseHcliOutput(output, 1, stdoutPath, stderrPath)
 		assert.NoError(t, err)
 		require.NotNil(t, details)
-		assert.Equal(t, "my-rule", details.MatchedRule)
+		assert.Equal(t, "r1", details.MatchedRule)
 	})
 }
 

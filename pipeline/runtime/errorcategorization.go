@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -9,6 +10,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/harness/harness-docker-runner/api"
@@ -212,15 +214,17 @@ func evaluateErrorCategorization(
 		}).Infoln("invoking hcli errors evaluate")
 
 		cmd := exec.CommandContext(ctx, hcliPath, args...)
+		var stderrBuf bytes.Buffer
+		cmd.Stderr = &stderrBuf
 		output, err := cmd.Output()
 
 		durationMs := time.Since(start).Milliseconds()
 
-		if ctx.Err() == context.DeadlineExceeded {
+		if ctx.Err() != nil {
 			logrus.WithFields(logrus.Fields{
 				"step_id":     stepID,
 				"duration_ms": durationMs,
-			}).Warnln("error categorization timed out")
+			}).Warnln("hcli errors evaluate timed out")
 			ch <- result{details: &api.ErrorDetails{
 				TimedOut:             true,
 				EvaluationDurationMs: durationMs,
@@ -233,6 +237,7 @@ func evaluateErrorCategorization(
 			logrus.WithError(err).WithFields(logrus.Fields{
 				"step_id":     stepID,
 				"duration_ms": durationMs,
+				"stderr":      strings.TrimSpace(stderrBuf.String()),
 			}).Warnln("hcli errors evaluate failed")
 			ch <- result{details: nil}
 			return
@@ -240,7 +245,11 @@ func evaluateErrorCategorization(
 
 		details, parseErr := parseHcliOutput(output, durationMs, stdoutPath, stderrPath)
 		if parseErr != nil {
-			logrus.WithError(parseErr).Warnln("failed to parse hcli errors evaluate output")
+			logrus.WithError(parseErr).WithFields(logrus.Fields{
+				"step_id":    stepID,
+				"raw_output": strings.TrimSpace(string(output)),
+				"stderr":     strings.TrimSpace(stderrBuf.String()),
+			}).Warnln("failed to parse hcli errors evaluate output")
 			ch <- result{details: nil}
 			return
 		}
@@ -289,6 +298,9 @@ type hcliEvaluateOutput struct {
 	MatchedRule    string `json:"matched_rule"`
 	Source         string `json:"source"`
 	RuleCount      int    `json:"rule_count"`
+	Matched        bool   `json:"matched"`
+	TimedOut       bool   `json:"timed_out"`
+	Error          string `json:"error"`
 }
 
 func parseHcliOutput(output []byte, durationMs int64, stdoutPath, stderrPath string) (*api.ErrorDetails, error) {
@@ -301,7 +313,11 @@ func parseHcliOutput(output []byte, durationMs int64, stdoutPath, stderrPath str
 		return nil, fmt.Errorf("unmarshal hcli output: %w", err)
 	}
 
-	if hcliOut.FailureType == "" && hcliOut.Message == "" && hcliOut.MatchedRule == "" {
+	if hcliOut.Error != "" {
+		logrus.WithField("hcli_error", hcliOut.Error).Warnln("hcli reported evaluation error")
+	}
+
+	if !hcliOut.Matched && !hcliOut.TimedOut {
 		return nil, nil
 	}
 
@@ -323,6 +339,6 @@ func parseHcliOutput(output []byte, durationMs int64, stdoutPath, stderrPath str
 		StdoutSizeBytes:      stdoutSize,
 		StderrSizeBytes:      stderrSize,
 		RuleCount:            hcliOut.RuleCount,
-		TimedOut:             false,
+		TimedOut:             hcliOut.TimedOut,
 	}, nil
 }
