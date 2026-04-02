@@ -96,13 +96,13 @@ type (
 		RunTest    RunTestConfig     `json:"run_test,omitempty"`
 		RunTestsV2 RunTestsV2Config  `json:"run_test_v2,omitempty"`
 
-		OutputVars        []string    `json:"output_vars,omitempty"`
-		TestReport        TestReport  `json:"test_report,omitempty"`
-		Timeout           int         `json:"timeout,omitempty"` // step timeout in seconds
-		MountDockerSocket *bool       `json:"mount_docker_socket"`
-		Outputs           []*OutputV2 `json:"outputs,omitempty"`
+		OutputVars        []string           `json:"output_vars,omitempty"`
+		TestReport        TestReport         `json:"test_report,omitempty"`
+		Timeout           int                `json:"timeout,omitempty"` // step timeout in seconds
+		MountDockerSocket *bool              `json:"mount_docker_socket"`
+		Outputs           []*OutputV2        `json:"outputs,omitempty"`
 		AnnotationsConfig *AnnotationsConfig `json:"annotations_config,omitempty"` // Annotations config for publishing
-		
+
 		// Valid only for steps running on docker container
 		Auth         *spec.Auth           `json:"auth,omitempty"`
 		CPUPeriod    int64                `json:"cpu_period,omitempty"`
@@ -174,6 +174,20 @@ type (
 		OutputV2          []*OutputV2          `json:"outputV2,omitempty"`
 		OptimizationState string               `json:"optimization_state,omitempty"`
 		Telemetry         *types.TelemetryData `json:"telemetry,omitempty"`
+		ErrorDetails      *ErrorDetails        `json:"error_details,omitempty"`
+	}
+
+	ErrorDetails struct {
+		FailureType          string `json:"failureType,omitempty"`
+		FailureSubType       string `json:"failureSubType,omitempty"`
+		Message              string `json:"message,omitempty"`
+		MatchedRule          string `json:"matchedRule,omitempty"`
+		Source               string `json:"source,omitempty"`
+		EvaluationDurationMs int64  `json:"evaluationDurationMs,omitempty"`
+		StdoutSizeBytes      int64  `json:"stdoutSizeBytes,omitempty"`
+		StderrSizeBytes      int64  `json:"stderrSizeBytes,omitempty"`
+		RuleCount            int32  `json:"ruleCount,omitempty"`
+		TimedOut             bool   `json:"timedOut,omitempty"`
 	}
 
 	StreamOutputRequest struct {

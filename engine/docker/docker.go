@@ -240,7 +240,7 @@ func (e *Docker) Destroy(ctx context.Context, pipelineConfig *spec.PipelineConfi
 
 // Run runs the pipeline step.
 func (e *Docker) Run(ctx context.Context, pipelineConfig *spec.PipelineConfig, step *spec.Step,
-	output io.Writer) (*runtime.State, error) {
+	output io.Writer, capture *spec.OutputCapture) (*runtime.State, error) {
 	// create the container
 	logrus.WithField("step_id", step.ID).Traceln("creating the container")
 	err := e.create(ctx, pipelineConfig, step, output)
@@ -255,7 +255,7 @@ func (e *Docker) Run(ctx context.Context, pipelineConfig *spec.PipelineConfig, s
 	}
 	// tail the container
 	logrus.WithField("step_id", step.ID).Traceln("tailing the container")
-	err = e.tail(ctx, step.ID, output)
+	err = e.tail(ctx, step.ID, output, capture)
 	if err != nil {
 		return nil, errors.TrimExtraInfo(err)
 	}
@@ -414,7 +414,7 @@ func (e *Docker) wait(ctx context.Context, id string) (*runtime.State, error) {
 
 // helper function emulates the `docker logs -f` command, streaming
 // all container logs until the container stops.
-func (e *Docker) tail(ctx context.Context, id string, output io.Writer) error {
+func (e *Docker) tail(ctx context.Context, id string, output io.Writer, capture *spec.OutputCapture) error {
 	opts := container.LogsOptions{
 		Follow:     true,
 		ShowStdout: true,
@@ -428,8 +428,19 @@ func (e *Docker) tail(ctx context.Context, id string, output io.Writer) error {
 		return err
 	}
 
+	stdoutDst := output
+	stderrDst := output
+	if capture != nil {
+		if capture.Stdout != nil {
+			stdoutDst = io.MultiWriter(output, capture.Stdout)
+		}
+		if capture.Stderr != nil {
+			stderrDst = io.MultiWriter(output, capture.Stderr)
+		}
+	}
+
 	go func() {
-		if _, err := stdcopy.StdCopy(output, output, logs); err != nil {
+		if _, err := stdcopy.StdCopy(stdoutDst, stderrDst, logs); err != nil {
 			logrus.WithField("error", err).Warnln("failed to copy logs while tailing")
 		}
 		logs.Close()

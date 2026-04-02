@@ -14,7 +14,7 @@ import (
 	"github.com/harness/harness-docker-runner/engine/spec"
 )
 
-func Run(ctx context.Context, step *spec.Step, output io.Writer) (*runtime.State, error) {
+func Run(ctx context.Context, step *spec.Step, output io.Writer, capture *spec.OutputCapture) (*runtime.State, error) {
 	if len(step.Entrypoint) == 0 {
 		return nil, errors.New("step entrypoint cannot be empty")
 	}
@@ -25,8 +25,17 @@ func Run(ctx context.Context, step *spec.Step, output io.Writer) (*runtime.State
 	cmd := exec.Command(step.Entrypoint[0], cmdArgs...) //nolint:gosec
 	cmd.Dir = step.WorkingDir
 	cmd.Env = toEnv(step.Envs)
-	cmd.Stderr = output
+
 	cmd.Stdout = output
+	cmd.Stderr = output
+	if capture != nil {
+		if capture.Stdout != nil {
+			cmd.Stdout = io.MultiWriter(output, capture.Stdout)
+		}
+		if capture.Stderr != nil {
+			cmd.Stderr = io.MultiWriter(output, capture.Stderr)
+		}
+	}
 
 	if err := cmd.Start(); err != nil {
 		return nil, err

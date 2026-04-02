@@ -8,6 +8,15 @@
 
 package spec
 
+import "io"
+
+// OutputCapture holds optional writers for capturing step stdout and stderr
+// into separate files (e.g. for error categorization). When nil, no capture occurs.
+type OutputCapture struct {
+	Stdout io.Writer
+	Stderr io.Writer
+}
+
 type (
 
 	// PipelineConfig provides the pipeline level configuration valid for all

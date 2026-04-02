@@ -17,6 +17,7 @@ import (
 
 	"github.com/harness/harness-docker-runner/api"
 	"github.com/harness/harness-docker-runner/engine"
+	"github.com/harness/harness-docker-runner/engine/spec"
 	"github.com/harness/harness-docker-runner/pipeline"
 	tiCfg "github.com/harness/lite-engine/ti/config"
 	"github.com/harness/lite-engine/ti/report"
@@ -24,7 +25,7 @@ import (
 	"github.com/harness/ti-client/types"
 )
 
-func executeRunStep(ctx context.Context, engine *engine.Engine, r *api.StartStepRequest, out io.Writer, tiConfig *tiCfg.Cfg) (
+func executeRunStep(ctx context.Context, engine *engine.Engine, r *api.StartStepRequest, out io.Writer, tiConfig *tiCfg.Cfg, capture *spec.OutputCapture) (
 	*runtime.State, map[string]string, []byte, []*api.OutputV2, string, *types.TelemetryData, error) {
 	start := time.Now()
 	telemetry := &types.TelemetryData{}
@@ -80,7 +81,7 @@ func executeRunStep(ctx context.Context, engine *engine.Engine, r *api.StartStep
 	artifactFile := fmt.Sprintf("%s/%s-artifact", pipeline.GetSharedVolPath(), step.ID)
 	step.Envs["PLUGIN_ARTIFACT_FILE"] = artifactFile
 
-	exited, err := engine.Run(ctx, step, out)
+	exited, err := engine.Run(ctx, step, out, capture)
 	timeTakenMs := time.Since(start).Milliseconds()
 	logrus.WithField("step_id", r.ID).WithField("stage_id", r.StageRuntimeID).Traceln("completed step run")
 	if _, rerr := report.ParseAndUploadTests(ctx, r.TestReport, r.WorkingDir, step.Name, log, time.Now(), tiConfig, &telemetry.TestIntelligenceMetaData, r.Envs); rerr != nil {
@@ -88,7 +89,7 @@ func executeRunStep(ctx context.Context, engine *engine.Engine, r *api.StartStep
 	}
 
 	// Parse and upload savings to TI
-	optimizationState = savings.ParseAndUploadSavings(ctx, r.WorkingDir, log, step.Name, checkStepSuccess(exited, err), timeTakenMs, tiConfig, r.Envs, telemetry)
+	optimizationState = savings.ParseAndUploadSavings(ctx, r.WorkingDir, log, step.Name, checkStepSuccess(exited, err), timeTakenMs, tiConfig, r.Envs, telemetry, r.Kind.String())
 
 	//only for git-clone-step
 	if buildLangFile, found := r.Envs["PLUGIN_BUILD_TOOL_FILE"]; found {
