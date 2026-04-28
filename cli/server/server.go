@@ -7,7 +7,6 @@ package server
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"os"
 	"os/signal"
 	RunTime "runtime"
@@ -90,7 +89,7 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 		}
 	}()
 
-	logrus.Infof(fmt.Sprintf("server listening at port %s", loadedConfig.Server.Bind))
+	logrus.Infof("server listening at port %s", loadedConfig.Server.Bind)
 	// run the setup checks / installation
 	if loadedConfig.Server.SkipPrepareServer {
 		logrus.Infoln("skipping prepare server eg install docker / git")
