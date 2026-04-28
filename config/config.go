@@ -28,7 +28,7 @@ type Config struct {
 		Insecure          bool   `envconfig:"SERVER_INSECURE" default:"true"`                        // run in insecure mode
 		PluginBinaryURI   string `envconfig:"PLUGIN_BINARY_URI" default:"https://github.com/drone/plugin/releases/download/v3.9.7"`
 		EnvmanBinaryURI   string `envconfig:"ENVMAN_BINARY_URI" default:"https://github.com/bitrise-io/envman/releases/download/2.5.6"`
-		HcliBinaryURI     string `envconfig:"HCLI_BINARY_URI" default:"https://storage.googleapis.com/harness-ti/hcli/v0.13"`
+		HcliBinaryURI     string `envconfig:"HCLI_BINARY_URI" default:"https://storage.googleapis.com/harness-ti/hcli/v0.14"`
 	}
 
 	Client struct {
