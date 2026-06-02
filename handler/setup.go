@@ -162,7 +162,7 @@ func updateVolumes(r api.SetupRequest) {
 			if v.HostPath.ID == "addon" {
 				v.HostPath.Create = true
 				v.HostPath.Remove = true
-				v.HostPath.Path = paths.ResolveHostPath(v.HostPath.Path)
+				v.HostPath.Path = paths.ResolveHostPath(v.HostPath.Path + "-" + sanitize(r.ID))
 			}
 		}
 
