@@ -85,7 +85,8 @@ func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.Start
 	}
 
 	//Passing default false for failed test for now.
-	if _, uerr := callgraph.Upload(ctx, step.Name, time.Since(start).Milliseconds(), log, time.Now(), tiConfig, cgDir, r.ID, nil, false, nil); uerr != nil {
+	leStepRequest := toLiteEngineStartStepRequest(r)
+	if _, uerr := callgraph.Upload(ctx, step.Name, time.Since(start).Milliseconds(), log, time.Now(), tiConfig, cgDir, r.ID, nil, false, leStepRequest); uerr != nil {
 		log.WithError(uerr).Errorln("unable to collect callgraph")
 	}
 

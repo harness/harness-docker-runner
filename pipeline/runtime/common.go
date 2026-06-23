@@ -258,6 +258,31 @@ func checkStepSuccess(state *runtime.State, err error) bool {
 	return false
 }
 
+func toLiteEngineStartStepRequest(r *api.StartStepRequest) *leapi.StartStepRequest {
+	if r == nil {
+		return nil
+	}
+	return &leapi.StartStepRequest{
+		ID:                r.ID,
+		StageRuntimeID:    r.StageRuntimeID,
+		Detach:            r.Detach,
+		Envs:              r.Envs,
+		Name:              r.Name,
+		LogKey:            r.LogKey,
+		LogDrone:          r.LogDrone,
+		Secrets:           r.Secrets,
+		WorkingDir:        r.WorkingDir,
+		Kind:              leapi.StepType(r.Kind),
+		Run:               leapi.RunConfig{Command: r.Run.Command, Entrypoint: r.Run.Entrypoint},
+		RunTest:           r.RunTest,
+		RunTestsV2:        r.RunTestsV2,
+		SoftStop:          r.SoftStop,
+		TestReport:        r.TestReport,
+		Timeout:           r.Timeout,
+		MountDockerSocket: r.MountDockerSocket,
+	}
+}
+
 // function to convert outputv2 from lite-engine outputv2 to api.OutputV2
 func convertOutputV2(outputV2 []*leapi.OutputV2) []*api.OutputV2 {
 	outputs := []*api.OutputV2{}
