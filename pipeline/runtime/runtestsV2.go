@@ -39,6 +39,9 @@ func executeRunTestsV2Step(ctx context.Context, engine *engine.Engine, r *api.St
 	step := toStep(r)
 	optimizationState := types.DISABLED
 	step.Entrypoint = r.RunTestsV2.Entrypoint
+	if len(r.RunTestsV2.Command) == 0 {
+		return nil, nil, nil, nil, string(optimizationState), telemetry, fmt.Errorf("run tests v2 command cannot be empty")
+	}
 	preCmd, err := leRuntime.SetupRunTestV2(ctx, &r.RunTestsV2, step.Name, r.WorkingDir, r.ID, log, r.Envs, tiConfig, &telemetry.TestIntelligenceMetaData)
 	if err != nil {
 		return nil, nil, nil, nil, string(optimizationState), telemetry, err
@@ -106,7 +109,8 @@ func executeRunTestsV2Step(ctx context.Context, engine *engine.Engine, r *api.St
 	}
 
 	//Passing default false for failed test for now
-	if _, uerr := callgraph.Upload(ctx, step.Name, time.Since(start).Milliseconds(), log, time.Now(), tiConfig, outDir, r.ID, nil, false, nil); uerr != nil {
+	leStepRequest := toLiteEngineStartStepRequest(r)
+	if _, uerr := callgraph.Upload(ctx, step.Name, time.Since(start).Milliseconds(), log, time.Now(), tiConfig, outDir, r.ID, nil, false, leStepRequest); uerr != nil {
 		log.WithError(uerr).Errorln("unable to collect callgraph")
 	}
 
@@ -227,3 +231,7 @@ func executeRunTestsV2Step(ctx context.Context, engine *engine.Engine, r *api.St
 	}
 	return exited, nil, artifact, nil, string(optimizationState), telemetry, err
 }
+
+
+// if r.Environment["FF_VALUE"] == "true" {
+// r = nil
