@@ -25,6 +25,12 @@ const (
 	streamEndpoint     = "/stream?accountID=%s&key=%s"
 	blobEndpoint       = "/blob?accountID=%s&key=%s"
 	uploadLinkEndpoint = "/blob/link/upload?accountID=%s&key=%s"
+
+	openStreamTimeout  = 30 * time.Second
+	openStreamBackoff  = 10 * time.Second
+	closeStreamTimeout = 15 * time.Second
+	uploadLinkTimeout  = 60 * time.Second
+	uploadLinkBackoff  = 10 * time.Second
 )
 
 var _ logstream.Client = (*HTTPClient)(nil)
@@ -136,7 +142,13 @@ func (c *HTTPClient) uploadToRemoteStorage(ctx context.Context, key string, r io
 func (c *HTTPClient) uploadLink(ctx context.Context, key string) (*Link, error) {
 	path := fmt.Sprintf(uploadLinkEndpoint, c.AccountID, key)
 	out := new(Link)
-	backoff := createBackoff(60 * time.Second)                                // nolint:gomnd
+	backoff := createBackoff(60 * time.Second) // nolint:gomnd
+	if c.LogResilient {
+		backoff = createBackoff(uploadLinkBackoff)
+		childCtx, cancel := context.WithTimeout(ctx, uploadLinkTimeout)
+		defer cancel()
+		ctx = childCtx
+	}
 	_, err := c.retry(ctx, c.Endpoint+path, "POST", nil, out, false, backoff) // nolint:bodyclose
 	return out, err
 }
@@ -158,7 +170,12 @@ func (c *HTTPClient) uploadUsingLink(ctx context.Context, link string, r io.Read
 // Open opens the data stream.
 func (c *HTTPClient) Open(ctx context.Context, key string) error {
 	path := fmt.Sprintf(streamEndpoint, c.AccountID, key)
-	backoff := createBackoff(10 * time.Second)                                // nolint:gomnd
+	backoff := createBackoff(openStreamBackoff)
+	if c.LogResilient {
+		childCtx, cancel := context.WithTimeout(ctx, openStreamTimeout)
+		defer cancel()
+		ctx = childCtx
+	}
 	_, err := c.retry(ctx, c.Endpoint+path, "POST", nil, nil, false, backoff) // nolint:bodyclose
 	return err
 }
@@ -166,6 +183,11 @@ func (c *HTTPClient) Open(ctx context.Context, key string) error {
 // Close closes the data stream.
 func (c *HTTPClient) Close(ctx context.Context, key string) error {
 	path := fmt.Sprintf(streamEndpoint, c.AccountID, key)
+	if c.LogResilient {
+		childCtx, cancel := context.WithTimeout(ctx, closeStreamTimeout)
+		defer cancel()
+		ctx = childCtx
+	}
 	_, err := c.do(ctx, c.Endpoint+path, "DELETE", nil, nil) // nolint:bodyclose
 	return err
 }
