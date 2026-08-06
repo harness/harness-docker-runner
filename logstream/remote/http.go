@@ -44,7 +44,7 @@ func NewHTTPClient(endpoint, accountID, token string, indirectUpload, skipverify
 		Token:          token,
 		SkipVerify:     skipverify,
 		IndirectUpload: indirectUpload,
-		LogResilient:      resilient,
+		LogResilient:   resilient,
 	}
 	if skipverify {
 		client.Client = &http.Client{
@@ -70,7 +70,7 @@ type HTTPClient struct {
 	AccountID      string
 	SkipVerify     bool
 	IndirectUpload bool
-	LogResilient      bool
+	LogResilient   bool
 }
 
 // UploadFile uploads the file directly to data store or via log service
@@ -144,10 +144,14 @@ func (c *HTTPClient) uploadLink(ctx context.Context, key string) (*Link, error) 
 // uploadUsingLink takes in a reader and a link object and uploads directly to
 // remote storage.
 func (c *HTTPClient) uploadUsingLink(ctx context.Context, link string, r io.Reader) error {
-	backoff := createInfiniteBackoff()
-	childCtx, cancel := context.WithTimeout(ctx, 60*time.Second) //nolint:gomnd
-	defer cancel()
-	_, err := c.retry(childCtx, link, "PUT", r, nil, true, backoff) //nolint:bodyclose
+	backoff := createBackoff(60 * time.Second) // nolint:gomnd
+	if c.LogResilient {
+		backoff = createInfiniteBackoff()
+		childCtx, cancel := context.WithTimeout(ctx, 60*time.Second) //nolint:gomnd
+		defer cancel()
+		ctx = childCtx
+	}
+	_, err := c.retry(ctx, link, "PUT", r, nil, true, backoff) //nolint:bodyclose
 	return err
 }
 
