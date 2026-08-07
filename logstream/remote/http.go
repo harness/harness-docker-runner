@@ -29,7 +29,7 @@ const (
 	openStreamTimeout  = 30 * time.Second
 	openStreamBackoff  = 10 * time.Second
 	closeStreamTimeout = 15 * time.Second
-	uploadLinkTimeout  = 60 * time.Second
+	uploadLinkTimeout  = 10 * time.Second
 	uploadLinkBackoff  = 10 * time.Second
 )
 
