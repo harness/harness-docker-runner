@@ -25,6 +25,7 @@ import (
 
 const (
 	ciEnablePluginOutputSecrets = "CI_ENABLE_PLUGIN_OUTPUT_SECRETS"
+	ciLogServiceResilience      = "CI_LOG_SERVICE_RESILIENCE"
 	trueValue                   = "true"
 	outputDelimiterSpace        = " "
 	outputDelimiterEquals       = "="

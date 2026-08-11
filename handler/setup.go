@@ -67,7 +67,8 @@ func HandleSetup(config *config.Config) http.HandlerFunc {
 		}
 		stepExecutor := prruntime.NewStepExecutor(engine)
 		state := pipeline.NewState()
-		state.Set(s.Volumes, s.Secrets, s.LogConfig, tiConfig, s.SetupRequestConfig.Network.ID)
+		logResilient := s.Envs["CI_LOG_SERVICE_RESILIENCE"] == "true"
+		state.Set(s.Volumes, s.Secrets, s.LogConfig, tiConfig, s.SetupRequestConfig.Network.ID, logResilient)
 
 		log := logrus.New()
 		var logr *logrus.Entry

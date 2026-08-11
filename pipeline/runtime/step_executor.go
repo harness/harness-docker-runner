@@ -341,8 +341,13 @@ func (e *StepExecutor) executeStep(r *api.StartStepRequest, secrets []string, cl
 
 	// close the stream. If the session is a remote session, the
 	// full log buffer is uploaded to the remote server.
-	if err = wc.Close(); err != nil {
-		result = multierror.Append(result, err)
+	if closeErr := wc.Close(); closeErr != nil {
+		if IsFeatureFlagEnabled(ciLogServiceResilience, e.engine, nil) && exited != nil && exited.ExitCode == 0 && err == nil {
+			logrus.WithError(closeErr).WithField("key", r.LogKey).
+				Warnln("log close/upload failed but step succeeded, ignoring")
+		} else {
+			result = multierror.Append(result, closeErr)
+		}
 	}
 
 	// if the context was canceled and returns a canceled or
