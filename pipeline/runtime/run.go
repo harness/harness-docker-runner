@@ -46,19 +46,19 @@ func executeRunStep(ctx context.Context, engine *engine.Engine, r *api.StartStep
 
 	if enablePluginOutputSecrets {
 		outputFile = fmt.Sprintf("%s/%s-output.env", pipeline.GetSharedVolPath(), step.ID)
-		step.Envs["DRONE_OUTPUT"] = outputFile
+		step.Envs["DRONE_OUTPUT"] = stepPath(step, outputFile)
 
 		outputSecretsFile = fmt.Sprintf("%s/%s-output-secrets.env", pipeline.GetSharedVolPath(), step.ID)
-		step.Envs["HARNESS_OUTPUT_SECRET_FILE"] = outputSecretsFile
+		step.Envs["HARNESS_OUTPUT_SECRET_FILE"] = stepPath(step, outputSecretsFile)
 	} else {
 		outputFile = fmt.Sprintf("%s/%s.out", pipeline.GetSharedVolPath(), step.ID)
-		step.Envs["DRONE_OUTPUT"] = outputFile
+		step.Envs["DRONE_OUTPUT"] = stepPath(step, outputFile)
 	}
 
 	if len(r.Outputs) > 0 {
-		step.Command[0] += getOutputsCmd(step.Entrypoint, r.Outputs, outputFile, enablePluginOutputSecrets)
+		step.Command[0] += getOutputsCmd(step.Entrypoint, r.Outputs, stepPath(step, outputFile), enablePluginOutputSecrets)
 	} else if len(r.OutputVars) > 0 {
-		step.Command[0] += getOutputVarCmd(step.Entrypoint, r.OutputVars, outputFile, enablePluginOutputSecrets)
+		step.Command[0] += getOutputVarCmd(step.Entrypoint, r.OutputVars, stepPath(step, outputFile), enablePluginOutputSecrets)
 	}
 
 	log := logrus.New()
@@ -71,7 +71,7 @@ func executeRunStep(ctx context.Context, engine *engine.Engine, r *api.StartStep
 
 	// Set annotations file path for producers to write rich annotations JSON
 	annotationsFile := fmt.Sprintf("%s/%s-annotations.json", pipeline.GetSharedVolPath(), step.ID)
-	step.Envs["HARNESS_ANNOTATIONS_FILE"] = annotationsFile
+	step.Envs["HARNESS_ANNOTATIONS_FILE"] = stepPath(step, annotationsFile)
 	// Set step ID (identifier from YAML) so hcli can populate it in annotations JSON
 	step.Envs["HARNESS_STEP_ID"] = step.Name
 
@@ -79,7 +79,7 @@ func executeRunStep(ctx context.Context, engine *engine.Engine, r *api.StartStep
 	injectHcliPathForWindowsContainer(step)
 
 	artifactFile := fmt.Sprintf("%s/%s-artifact", pipeline.GetSharedVolPath(), step.ID)
-	step.Envs["PLUGIN_ARTIFACT_FILE"] = artifactFile
+	step.Envs["PLUGIN_ARTIFACT_FILE"] = stepPath(step, artifactFile)
 
 	exited, err := engine.Run(ctx, step, out, capture)
 	timeTakenMs := time.Since(start).Milliseconds()
