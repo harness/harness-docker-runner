@@ -242,7 +242,9 @@ func parseVolume(runnerVolume string) (volume *spec.Volume, err error) {
 func setProxyEnvs(environment map[string]string) {
 	proxyEnvs := []string{"http_proxy", "https_proxy", "no_proxy", "HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY"}
 	for _, v := range proxyEnvs {
-		os.Setenv(v, environment[v])
+		if val := environment[v]; val != "" {
+			os.Setenv(v, val)
+		}
 	}
 }
 
