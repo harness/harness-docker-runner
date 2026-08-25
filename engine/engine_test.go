@@ -69,3 +69,65 @@ func TestIsFeatureFlagEnabled(t *testing.T) {
 		})
 	}
 }
+
+// A windows container only exposes a C drive, so a host path that follows
+// WORKING_DIR onto another drive has to be rewritten before the container sees
+// it. Otherwise docker refuses to create the container, reporting
+// "hcs::CreateComputeSystem ... The parameter is incorrect." (CI-24226).
+func TestToWindowsContainerDrive(t *testing.T) {
+	tests := []struct {
+		name string
+		path string
+		want string
+	}{
+		{
+			name: "non C drive is replaced by C",
+			path: `D:\Temp\engine`,
+			want: `C:\Temp\engine`,
+		},
+		{
+			name: "clone workspace on a non C drive",
+			path: `D:\Temp\harness-TL3MTDZqQ8C`,
+			want: `C:\Temp\harness-TL3MTDZqQ8C`,
+		},
+		{
+			name: "C drive is left alone",
+			path: `C:\Temp\engine`,
+			want: `C:\Temp\engine`,
+		},
+		{
+			name: "lowercase drive letter",
+			path: `e:\Temp\foo`,
+			want: `C:\Temp\foo`,
+		},
+		{
+			name: "forward slashes are converted",
+			path: `D:\Temp\engine/abc-output.env`,
+			want: `C:\Temp\engine\abc-output.env`,
+		},
+		{
+			name: "path without a drive gets the C drive",
+			path: "/addon",
+			want: `C:\addon`,
+		},
+		{
+			name: "docker socket is left alone",
+			path: DockerSockWinPath,
+			want: DockerSockWinPath,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, toWindowsContainerDrive(tc.path))
+		})
+	}
+}
+
+// toWindowsDrive keeps the drive letter it is given, which is what a path used
+// on the host needs.
+func TestToWindowsDriveKeepsExistingDrive(t *testing.T) {
+	assert.Equal(t, `D:\Temp\engine`, toWindowsDrive(`D:\Temp\engine`))
+	assert.Equal(t, `C:\addon`, toWindowsDrive("/addon"))
+	assert.Equal(t, DockerSockWinPath, toWindowsDrive(DockerSockWinPath))
+}
