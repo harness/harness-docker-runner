@@ -66,8 +66,13 @@ func executeRunStep(ctx context.Context, engine *engine.Engine, r *api.StartStep
 
 	logrus.WithField("step_id", r.ID).WithField("stage_id", r.StageRuntimeID).Infoln("starting step run")
 
-	// Log the command being executed
-	printCommand(step, out)
+	// Log the command being executed. Nil (older manager, field absent) defaults to showing it.
+	if r.ShowScriptInExecutionLogs == nil || *r.ShowScriptInExecutionLogs {
+		printCommand(step, out)
+	} else {
+		logrus.WithField("step_id", r.ID).WithField("stage_id", r.StageRuntimeID).
+			Debugln("skipping script preamble log: show_script_in_execution_logs is disabled")
+	}
 
 	// Set annotations file path for producers to write rich annotations JSON
 	annotationsFile := fmt.Sprintf("%s/%s-annotations.json", pipeline.GetSharedVolPath(), step.ID)

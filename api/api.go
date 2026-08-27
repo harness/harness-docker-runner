@@ -102,6 +102,7 @@ type (
 		MountDockerSocket *bool              `json:"mount_docker_socket"`
 		Outputs           []*OutputV2        `json:"outputs,omitempty"`
 		AnnotationsConfig *AnnotationsConfig `json:"annotations_config,omitempty"` // Annotations config for publishing
+		ShowScriptInExecutionLogs *bool `json:"show_script_in_execution_logs,omitempty"`
 
 		// Valid only for steps running on docker container
 		Auth         *spec.Auth           `json:"auth,omitempty"`
