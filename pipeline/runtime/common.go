@@ -6,6 +6,7 @@ package runtime
 
 import (
 	"bufio"
+	b64 "encoding/base64"
 	"errors"
 	"fmt"
 	"io"
@@ -18,9 +19,10 @@ import (
 	"github.com/harness/harness-docker-runner/engine"
 	"github.com/harness/harness-docker-runner/engine/spec"
 	"github.com/harness/harness-docker-runner/logstream"
-	"github.com/sirupsen/logrus"
-
 	leapi "github.com/harness/lite-engine/api"
+	tiCfg "github.com/harness/lite-engine/ti/config"
+	"github.com/harness/ti-client/types"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -317,6 +319,45 @@ func convertOutputV2(outputV2 []*leapi.OutputV2) []*api.OutputV2 {
 		})
 	}
 	return outputs
+}
+
+// setTiEnvVariables injects TI credentials into the step environment, matching lite-engine.
+// GetClient() is checked because docker-runner State starts with a zero Cfg whose client is nil.
+func setTiEnvVariables(step *spec.Step, config *tiCfg.Cfg) {
+	if config == nil || config.GetClient() == nil {
+		return
+	}
+	if step.Envs == nil {
+		step.Envs = map[string]string{}
+	}
+
+	envMap := step.Envs
+	envMap[types.TiSvcEp] = config.GetURL()
+	envMap[types.TiSvcToken] = b64.StdEncoding.EncodeToString([]byte(config.GetToken()))
+	envMap[types.AccountIDEnv] = config.GetAccountID()
+	envMap[types.OrgIDEnv] = config.GetOrgID()
+	envMap[types.ProjectIDEnv] = config.GetProjectID()
+	envMap[types.PipelineIDEnv] = config.GetPipelineID()
+	envMap[types.StageIDEnv] = config.GetStageID()
+	envMap[types.BuildIDEnv] = config.GetBuildID()
+	envMap[types.StepIDEnv] = step.Name
+	envMap[types.InfraEnv] = types.HarnessInfra
+}
+
+// TiTokenSecrets returns the raw and base64-encoded TI tokens for log masking.
+func TiTokenSecrets(config *tiCfg.Cfg) []string {
+	if config == nil || config.GetClient() == nil {
+		return nil
+	}
+	token := config.GetToken()
+	if token == "" {
+		return nil
+	}
+	encoded := b64.StdEncoding.EncodeToString([]byte(token))
+	if encoded == token {
+		return []string{token}
+	}
+	return []string{token, encoded}
 }
 
 // injectHcliPathForWindowsContainer adds hcli directory to PATH for Windows container steps

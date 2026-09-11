@@ -32,6 +32,7 @@ func executeRunStep(ctx context.Context, engine *engine.Engine, r *api.StartStep
 	step := toStep(r)
 	step.Command = r.Run.Command
 	step.Entrypoint = r.Run.Entrypoint
+	setTiEnvVariables(step, tiConfig)
 
 	optimizationState := types.DISABLED
 	if (len(r.OutputVars) > 0 || len(r.Outputs) > 0) && (len(step.Entrypoint) == 0 || len(step.Command) == 0) {

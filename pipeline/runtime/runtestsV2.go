@@ -38,6 +38,7 @@ func executeRunTestsV2Step(ctx context.Context, engine *engine.Engine, r *api.St
 	log.Out = out
 	step := toStep(r)
 	optimizationState := types.DISABLED
+	setTiEnvVariables(step, tiConfig)
 	step.Entrypoint = r.RunTestsV2.Entrypoint
 	if len(r.RunTestsV2.Command) == 0 {
 		return nil, nil, nil, nil, string(optimizationState), telemetry, fmt.Errorf("run tests v2 command cannot be empty")

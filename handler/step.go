@@ -85,7 +85,9 @@ func HandleStartStep(config *config.Config) http.HandlerFunc {
 			s.StartStepRequestConfig.Envs["HARNESS_ANNOTATIONS_SERVICE_ENDPOINT"] = s.StartStepRequestConfig.AnnotationsConfig.URL
 			s.StartStepRequestConfig.Envs["HARNESS_ANNOTATIONS_SERVICE_TOKEN"] = s.StartStepRequestConfig.AnnotationsConfig.Token
 		}
-		
+
+		s.Secrets = append(s.Secrets, pruntime.TiTokenSecrets(stageData.State.GetTIConfig())...)
+
 		// Append all secrets (including annotations token) to stage state for masking
 		stageData.State.AppendSecrets(s.Secrets)
 
