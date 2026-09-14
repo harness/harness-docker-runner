@@ -71,3 +71,10 @@ func (r *replacer) Close() error {
 func (r *replacer) Error() error {
 	return r.w.Error()
 }
+
+func (r *replacer) LogServiceStats() Stats {
+	if p, ok := r.w.(StatsProvider); ok {
+		return p.LogServiceStats()
+	}
+	return Stats{}
+}
