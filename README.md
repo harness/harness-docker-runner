@@ -1,14 +1,97 @@
 # Harness-Docker-Runner
 
-How to use:
+## Running locally
 
-* Create an .env file. It can be empty.
-* To build linux and windows `GOOS=windows go build -o lite-engine.exe; go build`
-* Generate tls credentials: go run main.go certs
-* Start server: go run main.go server
-* Client call to check health status of server: go run main.go client.
+* Create an `.env` file. It can be empty.
+* Generate tls credentials: `go run main.go certs`
+* Start the server: `go run main.go server`
+* Check the health status of the server: `go run main.go client`
 
-### Instruction for Running it as Windows Service 
+## Building binaries
+
+Cross-compiling needs no extra setup — the binaries land in the `release` directory.
+
+**Linux**
+```
+GOOS=linux GOARCH=amd64 go build -o release/harness-docker-runner-linux-amd64 .
+GOOS=linux GOARCH=arm64 go build -o release/harness-docker-runner-linux-arm64 .
+```
+
+**Windows**
+```
+GOOS=windows GOARCH=amd64 go build -o release/harness-docker-runner-windows-amd64.exe .
+```
+
+To stamp a version into the binary (otherwise `--version` reports empty):
+```
+go build -ldflags "-X github.com/harness/harness-docker-runner/version.Version=1.2.3" -o release/harness-docker-runner-linux-amd64 .
+```
+
+## Running QA Automation
+
+VMs live in the `ci-play` GCP project:
+
+| VM | Purpose |
+| --- | --- |
+| [`self-hosted-qa-vm`](https://console.cloud.google.com/compute/instancesDetail/zones/us-central1-f/instances/self-hosted-qa-vm?authuser=1&project=ci-play) (`us-central1-f`) | Linux — runs the amd64 binary as a background process, and as a docker run |
+| [`ci-window-qa`](https://console.cloud.google.com/compute/instancesDetail/zones/us-central1-c/instances/ci-window-qa?authuser=1&project=ci-play) (`us-central1-c`) | Windows server VM |
+| [`ci-window-automation-linux`](https://console.cloud.google.com/compute/instancesDetail/zones/us-central1-a/instances/ci-window-automation-linux?authuser=1&project=ci-play) (`us-central1-a`) | Linux VM used for the Windows runs |
+
+### Deploying a local build to the Linux QA VM
+
+Copy the binary up. Use an absolute destination path — `$HOME` on this VM does not
+match the directory you actually land in, so `~` will appear to swallow the file:
+
+```
+gcloud compute scp release/harness-docker-runner-linux-amd64 \
+  "self-hosted-qa-vm":/home/$USER/harness-docker-runner-linux-amd64 \
+  --zone "us-central1-f" --project "ci-play"
+```
+
+The first copy can take a couple of minutes while gcloud propagates SSH keys to the
+project metadata. Then SSH in:
+
+```
+gcloud compute ssh "self-hosted-qa-vm" --zone "us-central1-f" --project "ci-play"
+```
+
+The runner is served out of `/root`, so install the new binary there:
+
+```
+sudo cp /home/$USER/harness-docker-runner-linux-amd64 /root/harness-docker-runner-linux-amd64
+```
+
+### Managing the background runner
+
+The runner is started with `nohup`, so it is orphaned to `ppid=1` and is not managed
+by systemd — nothing restarts it for you after a kill.
+
+```
+# list the running runners
+ps -eo pid,ppid,user,etime,stat,cmd | grep -i harness-docker-runner | grep -v grep
+
+# find which one is actually serving the API (port 3000)
+sudo ss -ltnp | grep 3000
+```
+
+More than one process can survive here: only the one holding port 3000 is live, and
+any other is a stale leftover from an earlier start. Kill by pid, then restart:
+
+```
+sudo kill <pid>          # add -9 if it does not exit
+
+cd /root
+sudo nohup ./harness-docker-runner-linux-amd64 server > runner.log 2>&1 &
+tail -f /root/runner.log
+```
+
+Verify it is up:
+
+```
+curl http://localhost:3000/healthz
+```
+
+### Instruction for Running it as Windows Service
 
 If you want to install Harness-Docker-Runner as a service in Windows, please follow the bellow instructions.
 

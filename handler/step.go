@@ -208,9 +208,11 @@ func updateGitCloneConfig(s *api.StartStepRequestConfig) {
 					}
 				}
 				ws := filepath.Join(s.WorkingDir, last)
-				s.Envs["DRONE_WORKSPACE"] = ws
+				// The clone step reads this from inside its container, so it
+				// needs the container side view of the workspace.
+				s.Envs["DRONE_WORKSPACE"] = engine.ToContainerPath(ws)
 			} else if !filepath.IsAbs(ws) {
-				s.Envs["DRONE_WORKSPACE"] = filepath.Join(s.WorkingDir, ws)
+				s.Envs["DRONE_WORKSPACE"] = engine.ToContainerPath(filepath.Join(s.WorkingDir, ws))
 			}
 		}
 	}

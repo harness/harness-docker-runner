@@ -25,6 +25,7 @@ import (
 
 const (
 	ciEnablePluginOutputSecrets = "CI_ENABLE_PLUGIN_OUTPUT_SECRETS"
+	ciLogServiceResilience      = "CI_LOG_SERVICE_RESILIENCE"
 	trueValue                   = "true"
 	outputDelimiterSpace        = " "
 	outputDelimiterEquals       = "="
@@ -32,6 +33,18 @@ const (
 	// Windows container path where hcli is mounted (used for PATH injection)
 	hcliWindowsContainerPath = `C:\harness-hcli`
 )
+
+// stepPath returns a runner owned host path as the step's process will see it.
+// The two only differ for a containerized step on windows, where the shared
+// volume is bind-mounted onto the container's C drive: the step has to be given
+// the container side path, while the runner keeps using the host path to read
+// the file back afterwards.
+func stepPath(step *spec.Step, hostPath string) string {
+	if step.Image == "" {
+		return hostPath
+	}
+	return engine.ToContainerPath(hostPath)
+}
 
 func getNudges() []logstream.Nudge {
 	// <search-term> <resolution> <error-msg>

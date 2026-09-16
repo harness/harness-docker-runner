@@ -67,7 +67,8 @@ func HandleSetup(config *config.Config) http.HandlerFunc {
 		}
 		stepExecutor := prruntime.NewStepExecutor(engine)
 		state := pipeline.NewState()
-		state.Set(s.Volumes, s.Secrets, s.LogConfig, tiConfig, s.SetupRequestConfig.Network.ID)
+		logResilient := s.Envs["CI_LOG_SERVICE_RESILIENCE"] == "true"
+		state.Set(s.Volumes, s.Secrets, s.LogConfig, tiConfig, s.SetupRequestConfig.Network.ID, logResilient)
 
 		log := logrus.New()
 		var logr *logrus.Entry
@@ -241,7 +242,9 @@ func parseVolume(runnerVolume string) (volume *spec.Volume, err error) {
 func setProxyEnvs(environment map[string]string) {
 	proxyEnvs := []string{"http_proxy", "https_proxy", "no_proxy", "HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY"}
 	for _, v := range proxyEnvs {
-		os.Setenv(v, environment[v])
+		if val := environment[v]; val != "" {
+			os.Setenv(v, val)
+		}
 	}
 }
 

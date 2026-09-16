@@ -112,7 +112,15 @@ func (e *Engine) Run(ctx context.Context, step *spec.Step, output io.Writer, cap
 		envs[k] = v
 	}
 	step.Envs = envs
-	step.WorkingDir = pathConverter(step.WorkingDir)
+
+	// A step with an image runs inside a container, which on windows only ever
+	// exposes a C drive, so it needs the container's view of the paths it is
+	// given. A step without one runs straight on the host and keeps host paths.
+	stepPath := pathConverter
+	if step.Image != "" {
+		stepPath = ToContainerPath
+	}
+	step.WorkingDir = stepPath(step.WorkingDir)
 	step.Envs[HARNESS_WORKSPACE] = step.WorkingDir
 
 	// create files or folders specific to the step
@@ -121,7 +129,7 @@ func (e *Engine) Run(ctx context.Context, step *spec.Step, output io.Writer, cap
 	}
 
 	for _, vol := range step.Volumes {
-		vol.Path = pathConverter(vol.Path)
+		vol.Path = stepPath(vol.Path)
 	}
 
 	if step.Image != "" {
@@ -182,6 +190,20 @@ func pathConverter(path string) string {
 	return path
 }
 
+// ToContainerPath converts a path that a container will see: a bind mount
+// target, the container's working directory, or a path handed to the process
+// running inside it. A windows container only ever exposes a C drive, so unlike
+// pathConverter any other drive letter is replaced rather than kept. These paths
+// are derived from host paths that follow WORKING_DIR, so with WORKING_DIR on
+// D:\Temp docker otherwise refuses to create the container, reporting
+// "hcs::CreateComputeSystem ... The parameter is incorrect." (CI-24226).
+func ToContainerPath(path string) string {
+	if osruntime.GOOS == "windows" {
+		return toWindowsContainerDrive(path)
+	}
+	return path
+}
+
 // helper function converts the path to a valid windows
 // path, including the default C drive.
 func toWindowsDrive(s string) string {
@@ -192,6 +214,17 @@ func toWindowsDrive(s string) string {
 		return toWindowsPath(s)
 	}
 	return "C:" + toWindowsPath(s)
+}
+
+// helper function moves a windows path onto the C drive, the only drive a
+// windows container exposes. Counterpart to toWindowsDrive, which keeps the
+// drive letter it is given; that always leaves a drive letter to replace here.
+func toWindowsContainerDrive(s string) string {
+	converted := toWindowsDrive(s)
+	if matchDockerSockPath(converted) {
+		return converted
+	}
+	return "C:" + converted[2:]
 }
 
 // helper function converts the path to a valid windows

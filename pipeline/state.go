@@ -25,12 +25,13 @@ func GetSharedVolPath() string {
 
 // State stores the pipeline state.
 type State struct {
-	volumes   []*spec.Volume
-	logConfig api.LogConfig
-	tiConfig  tiCfg.Cfg
-	secrets   []string
-	logClient logstream.Client
-	network   string
+	volumes      []*spec.Volume
+	logConfig    api.LogConfig
+	tiConfig     tiCfg.Cfg
+	secrets      []string
+	logClient    logstream.Client
+	network      string
+	logResilient bool
 }
 
 func NewState() *State {
@@ -43,12 +44,13 @@ func NewState() *State {
 	}
 }
 
-func (s *State) Set(volumes []*spec.Volume, secrets []string, logConfig api.LogConfig, tiConfig tiCfg.Cfg, network string) { // nolint:gocritic
+func (s *State) Set(volumes []*spec.Volume, secrets []string, logConfig api.LogConfig, tiConfig tiCfg.Cfg, network string, logResilient bool) { // nolint:gocritic
 	s.volumes = volumes
 	s.secrets = secrets
 	s.logConfig = logConfig
 	s.tiConfig = tiConfig
 	s.network = network
+	s.logResilient = logResilient
 }
 
 func (s *State) GetSecrets() []string {
@@ -66,7 +68,7 @@ func (s *State) GetLogStreamClient() logstream.Client {
 	if s.logClient == nil {
 		if s.logConfig.URL != "" {
 			s.logClient = remote.NewHTTPClient(s.logConfig.URL, s.logConfig.AccountID,
-				s.logConfig.Token, s.logConfig.IndirectUpload, false)
+				s.logConfig.Token, s.logConfig.IndirectUpload, false, s.logResilient)
 		} else {
 			s.logClient = filestore.New(GetSharedVolPath())
 		}
