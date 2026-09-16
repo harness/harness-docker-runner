@@ -162,7 +162,7 @@ func (b *Writer) Write(p []byte) (n int, err error) {
 func (b *Writer) Open() error {
 	start := time.Now()
 	err := b.client.Open(context.Background(), b.key)
-	b.recordOp("open", err, time.Since(start), 0)
+	b.recordOp("open", err, time.Since(start))
 	if err != nil {
 		logrus.WithError(err).WithField("key", b.key).
 			Errorln("could not open the stream")
@@ -189,7 +189,7 @@ func (b *Writer) Close() error {
 	err := b.upload()
 	start := time.Now()
 	errc := b.client.Close(context.Background(), b.key)
-	b.recordOp("close", errc, time.Since(start), 0)
+	b.recordOp("close", errc, time.Since(start))
 	if errc != nil {
 		logrus.WithError(errc).WithField("key", b.key).
 			Errorln("failed to close log stream")
@@ -201,13 +201,7 @@ func (b *Writer) Close() error {
 func (b *Writer) upload() error {
 	start := time.Now()
 	err := b.client.Upload(context.Background(), b.key, b.history)
-	var bytes int64
-	for _, line := range b.history {
-		if jsonLine, herr := json.Marshal(line); herr == nil {
-			bytes += int64(len(jsonLine))
-		}
-	}
-	b.recordOp("upload", err, time.Since(start), bytes)
+	b.recordOp("upload", err, time.Since(start))
 	return err
 }
 
@@ -222,13 +216,7 @@ func (b *Writer) flush() error {
 	}
 	start := time.Now()
 	err := b.client.Write(context.Background(), b.key, lines)
-	var bytes int64
-	for _, line := range lines {
-		if jsonLine, herr := json.Marshal(line); herr == nil {
-			bytes += int64(len(jsonLine))
-		}
-	}
-	b.recordOp("write", err, time.Since(start), bytes)
+	b.recordOp("write", err, time.Since(start))
 	if err != nil {
 		logrus.WithError(err).WithField("key", b.key).WithField("num_lines", len(lines)).
 			Errorln("failed to flush lines")
@@ -358,7 +346,7 @@ func (b *Writer) LogServiceStats() logstream.Stats {
 	return b.stats
 }
 
-func (b *Writer) recordOp(op string, rpcErr error, latency time.Duration, bytes int64) {
+func (b *Writer) recordOp(op string, rpcErr error, latency time.Duration) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	s := b.opStatsLocked(op)
@@ -368,12 +356,10 @@ func (b *Writer) recordOp(op string, rpcErr error, latency time.Duration, bytes 
 	s.Count++
 	if rpcErr != nil {
 		s.ErrorCount++
+		return
 	}
 	if latency > 0 {
 		s.LatencyMs += latency.Milliseconds()
-	}
-	if bytes > 0 {
-		s.Bytes += bytes
 	}
 }
 
