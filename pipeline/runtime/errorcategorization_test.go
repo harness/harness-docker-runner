@@ -21,7 +21,7 @@ func newTestTiConfig(pipelineID, stageID string) *tiCfg.Cfg {
 		"", "", "",
 		"", "", "",
 		"", "",
-		false, false, "", "",
+		false, "", "",
 	)
 	return &cfg
 }
