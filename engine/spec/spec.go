@@ -145,6 +145,10 @@ type (
 	VolumeDevice struct {
 		Name       string `json:"name,omitempty"`
 		DevicePath string `json:"path,omitempty"`
+		// HostPath is the device path on the host (e.g. "/dev/kvm").
+		// When set, the device is mapped directly without requiring
+		// a corresponding entry in PipelineConfig.Volumes.
+		HostPath string `json:"host_path,omitempty"`
 	}
 
 	// Network that is created and attached to containers

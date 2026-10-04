@@ -107,8 +107,10 @@ func toHostConfig(pipelineConfig *spec.PipelineConfig, step *spec.Step) *contain
 		}
 	}
 
-	if len(step.Volumes) != 0 {
+	if len(step.Devices) != 0 {
 		config.Devices = toDeviceSlice(pipelineConfig, step)
+	}
+	if len(step.Volumes) != 0 {
 		config.Binds = toVolumeSlice(pipelineConfig, step)
 		config.Mounts = toVolumeMounts(pipelineConfig, step)
 	}
@@ -200,6 +202,18 @@ func toNetConfig(pipelineConfig *spec.PipelineConfig, proc *spec.Step) *network.
 func toDeviceSlice(pipelineConfig *spec.PipelineConfig, step *spec.Step) []container.DeviceMapping {
 	var to []container.DeviceMapping
 	for _, mount := range step.Devices {
+		if mount.HostPath != "" {
+			containerPath := mount.DevicePath
+			if containerPath == "" {
+				containerPath = mount.HostPath
+			}
+			to = append(to, container.DeviceMapping{
+				PathOnHost:        mount.HostPath,
+				PathInContainer:   containerPath,
+				CgroupPermissions: "rwm",
+			})
+			continue
+		}
 		device, ok := lookupVolume(pipelineConfig, mount.Name)
 		if !ok {
 			continue
