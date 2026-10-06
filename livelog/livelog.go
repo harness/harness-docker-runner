@@ -51,6 +51,11 @@ type Writer struct {
 	trimNewLineSuffix bool
 	close             chan struct{}
 	ready             chan struct{}
+	// closeOnce makes upload()+client.Close run exactly once. stop() only
+	// gates the flusher, so a second Close() (timeout vs executeStep, or a
+	// retry) would otherwise tally close/upload twice in log_service_stats.
+	closeOnce sync.Once
+	closeErr  error
 
 	stats logstream.Stats
 }
@@ -175,7 +180,19 @@ func (b *Writer) Open() error {
 
 // Close closes the writer and uploads the full contents to
 // the server.
+//
+// Close can be invoked more than once (a timed-out step's execute path, or a
+// later retry). Without the sync.Once below each call would re-run upload()
+// and client.Close (stop() only gates the flusher). Every caller gets the
+// first call's error, and log_service_stats counts each RPC once.
 func (b *Writer) Close() error {
+	b.closeOnce.Do(func() {
+		b.closeErr = b.closeStream()
+	})
+	return b.closeErr
+}
+
+func (b *Writer) closeStream() error {
 	if b.stop() {
 		// Flush anything waiting on a new line
 		if len(b.prev) > 0 {

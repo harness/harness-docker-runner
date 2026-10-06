@@ -10,6 +10,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -88,15 +90,18 @@ func compare(a, b []*logstream.Line) error {
 
 type mockClient struct {
 	client.Client
-	lines     []*logstream.Line
-	uploaded  []*logstream.Line
-	openErr   error
-	writeErr  error
-	closeErr  error
-	uploadErr error
+	lines       []*logstream.Line
+	uploaded    []*logstream.Line
+	openErr     error
+	writeErr    error
+	closeErr    error
+	uploadErr   error
+	closeCalls  int32
+	uploadCalls int32
 }
 
 func (m *mockClient) Upload(ctx context.Context, key string, lines []*logstream.Line) error {
+	atomic.AddInt32(&m.uploadCalls, 1)
 	m.uploaded = lines
 	return m.uploadErr
 }
@@ -107,6 +112,7 @@ func (m *mockClient) Open(ctx context.Context, key string) error {
 
 // Close closes the data stream.
 func (m *mockClient) Close(ctx context.Context, key string) error {
+	atomic.AddInt32(&m.closeCalls, 1)
 	return m.closeErr
 }
 
@@ -222,5 +228,82 @@ func statsFor(w *Writer, op string) logstream.OpStats {
 		return w.stats.Upload
 	default:
 		return logstream.OpStats{}
+	}
+}
+
+// TestWriter_CloseIsIdempotent is the timeout-path regression: a second Close()
+// must not re-run upload()+client.Close or double-count log_service_stats.
+func TestWriter_CloseIsIdempotent(t *testing.T) {
+	uploadErr := errors.New("upload boom")
+	mc := &mockClient{uploadErr: uploadErr}
+	w := New(mc, "k", "n", nil, false)
+	w.SetInterval(time.Hour)
+	if err := w.Open(); err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	if _, err := w.Write([]byte("line\n")); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+
+	first := w.Close()
+	second := w.Close()
+	if first != uploadErr {
+		t.Fatalf("first Close: got %v want %v", first, uploadErr)
+	}
+	if second != first {
+		t.Fatalf("second Close: got %v want same as first %v", second, first)
+	}
+	if got := atomic.LoadInt32(&mc.uploadCalls); got != 1 {
+		t.Fatalf("upload RPCs: got %d want 1", got)
+	}
+	if got := atomic.LoadInt32(&mc.closeCalls); got != 1 {
+		t.Fatalf("close RPCs: got %d want 1", got)
+	}
+	s := w.LogServiceStats()
+	if s.Upload.Count != 1 || s.Upload.ErrorCount != 1 {
+		t.Fatalf("upload stats count=%d errorCount=%d want 1/1", s.Upload.Count, s.Upload.ErrorCount)
+	}
+	if s.Close.Count != 1 || s.Close.ErrorCount != 0 {
+		t.Fatalf("close stats count=%d errorCount=%d want 1/0", s.Close.Count, s.Close.ErrorCount)
+	}
+}
+
+func TestWriter_CloseConcurrentIsIdempotent(t *testing.T) {
+	mc := &mockClient{}
+	w := New(mc, "k", "n", nil, false)
+	w.SetInterval(time.Hour)
+	if err := w.Open(); err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	if _, err := w.Write([]byte("line\n")); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+
+	const n = 8
+	errs := make([]error, n)
+	var wg sync.WaitGroup
+	for i := 0; i < n; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			errs[i] = w.Close()
+		}(i)
+	}
+	wg.Wait()
+
+	if got := atomic.LoadInt32(&mc.uploadCalls); got != 1 {
+		t.Fatalf("upload RPCs: got %d want 1", got)
+	}
+	if got := atomic.LoadInt32(&mc.closeCalls); got != 1 {
+		t.Fatalf("close RPCs: got %d want 1", got)
+	}
+	s := w.LogServiceStats()
+	if s.Upload.Count != 1 || s.Close.Count != 1 {
+		t.Fatalf("stats upload=%d close=%d want 1/1", s.Upload.Count, s.Close.Count)
+	}
+	for i, err := range errs {
+		if err != nil {
+			t.Fatalf("closer %d: %v", i, err)
+		}
 	}
 }
