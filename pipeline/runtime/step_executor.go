@@ -38,6 +38,7 @@ type StepStatus struct {
 	OptimizationState string
 	Telemetry         *types.TelemetryData
 	ErrorDetails      *api.ErrorDetails
+	LogServiceStats   *api.LogServiceStats
 }
 
 const (
@@ -84,7 +85,7 @@ func (e *StepExecutor) StartStep(ctx context.Context, r *api.StartStepRequest, s
 		stderrLogPath := getStderrLogFilePath(r.ID)
 		defer cleanupLogFiles(stdoutLogPath, stderrLogPath)
 
-		state, outputs, artifact, outputV2, optimizationState, telemetry, stepErr := e.executeStep(r, secrets, client, tiConfig, logConfig)
+		state, outputs, artifact, outputV2, optimizationState, telemetry, logStats, stepErr := e.executeStep(r, secrets, client, tiConfig, logConfig)
 
 		// Post annotations to Pipeline Service if step succeeded and feature is enabled
 		ffEnabled := isAnnotationsEnabled(r.StartStepRequestConfig.Envs)
@@ -108,7 +109,7 @@ func (e *StepExecutor) StartStep(ctx context.Context, r *api.StartStepRequest, s
 			)
 		}
 
-		status := StepStatus{Status: Complete, State: state, StepErr: stepErr, Outputs: outputs, Artifact: artifact, OutputV2: outputV2, OptimizationState: optimizationState, Telemetry: telemetry, ErrorDetails: errorDetails}
+		status := StepStatus{Status: Complete, State: state, StepErr: stepErr, Outputs: outputs, Artifact: artifact, OutputV2: outputV2, OptimizationState: optimizationState, Telemetry: telemetry, ErrorDetails: errorDetails, LogServiceStats: logStats}
 		e.mu.Lock()
 		e.stepStatus[r.ID] = status
 		channels := e.stepWaitCh[r.ID]
@@ -263,10 +264,10 @@ func (e *StepExecutor) executeStepDrone(r *api.StartStepRequest, tiConfig *tiCfg
 	return runStep()
 }
 
-func (e *StepExecutor) executeStep(r *api.StartStepRequest, secrets []string, client logstream.Client, tiConfig *tiCfg.Cfg, logConfig *api.LogConfig) (*runtime.State, map[string]string, []byte, []*api.OutputV2, string, *types.TelemetryData, error) {
+func (e *StepExecutor) executeStep(r *api.StartStepRequest, secrets []string, client logstream.Client, tiConfig *tiCfg.Cfg, logConfig *api.LogConfig) (*runtime.State, map[string]string, []byte, []*api.OutputV2, string, *types.TelemetryData, *api.LogServiceStats, error) {
 	if r.LogDrone {
 		state, err := e.executeStepDrone(r, tiConfig)
-		return state, nil, nil, nil, "", nil, err
+		return state, nil, nil, nil, "", nil, nil, err
 	}
 
 	wc := livelog.New(client, r.LogKey, r.Name, getNudges(), logConfig.TrimNewLineSuffix)
@@ -289,7 +290,7 @@ func (e *StepExecutor) executeStep(r *api.StartStepRequest, secrets []string, cl
 			e.run(ctx, e.engine, r, wr, tiConfig, nil) // nolint:errcheck
 			wc.Close()
 		}()
-		return &runtime.State{Exited: false}, nil, nil, nil, "", nil, nil
+		return &runtime.State{Exited: false}, nil, nil, nil, "", nil, nil, nil
 	}
 
 	var result error
@@ -349,12 +350,13 @@ func (e *StepExecutor) executeStep(r *api.StartStepRequest, secrets []string, cl
 			result = multierror.Append(result, closeErr)
 		}
 	}
+	stats := logServiceStatsFrom(wc)
 
 	// if the context was canceled and returns a canceled or
 	// DeadlineExceeded error this indicates the step was timed out.
 	switch ctx.Err() {
 	case context.Canceled, context.DeadlineExceeded:
-		return nil, nil, nil, nil, "", telemetry, ctx.Err()
+		return nil, nil, nil, nil, "", telemetry, stats, ctx.Err()
 	}
 
 	if exited != nil {
@@ -370,7 +372,7 @@ func (e *StepExecutor) executeStep(r *api.StartStepRequest, secrets []string, cl
 			logrus.WithField("id", r.ID).Infof("received exit code %d\n", exited.ExitCode)
 		}
 	}
-	return exited, outputs, artifact, outputV2, optimizationState, telemetry, result
+	return exited, outputs, artifact, outputV2, optimizationState, telemetry, stats, result
 }
 
 func (e *StepExecutor) run(ctx context.Context, engine *engine.Engine, r *api.StartStepRequest, out io.Writer, tiConfig *tiCfg.Cfg, capture *spec.OutputCapture) (
@@ -393,6 +395,7 @@ func convertStatus(status StepStatus) *api.PollStepResponse {
 		OptimizationState: status.OptimizationState,
 		Telemetry:         status.Telemetry,
 		ErrorDetails:      status.ErrorDetails,
+		LogServiceStats:   status.LogServiceStats,
 	}
 
 	stepErr := status.StepErr
@@ -416,4 +419,17 @@ func convertStatus(status StepStatus) *api.PollStepResponse {
 		r.Error = stepErr.Error()
 	}
 	return r
+}
+
+func logServiceStatsFrom(w logstream.Writer) *api.LogServiceStats {
+	s := logstream.CopyStats(w)
+	if s == nil {
+		return nil
+	}
+	return &api.LogServiceStats{
+		Open:   api.LogServiceOpStats{Count: s.Open.Count, ErrorCount: s.Open.ErrorCount, LatencyMs: s.Open.LatencyMs},
+		Write:  api.LogServiceOpStats{Count: s.Write.Count, ErrorCount: s.Write.ErrorCount, LatencyMs: s.Write.LatencyMs},
+		Close:  api.LogServiceOpStats{Count: s.Close.Count, ErrorCount: s.Close.ErrorCount, LatencyMs: s.Close.LatencyMs},
+		Upload: api.LogServiceOpStats{Count: s.Upload.Count, ErrorCount: s.Upload.ErrorCount, LatencyMs: s.Upload.LatencyMs},
+	}
 }

@@ -176,6 +176,20 @@ type (
 		OptimizationState string               `json:"optimization_state,omitempty"`
 		Telemetry         *types.TelemetryData `json:"telemetry,omitempty"`
 		ErrorDetails      *ErrorDetails        `json:"error_details,omitempty"`
+		LogServiceStats   *LogServiceStats     `json:"log_service_stats,omitempty"`
+	}
+
+	LogServiceStats struct {
+		Open   LogServiceOpStats `json:"open"`
+		Write  LogServiceOpStats `json:"write"`
+		Close  LogServiceOpStats `json:"close"`
+		Upload LogServiceOpStats `json:"upload"`
+	}
+
+	LogServiceOpStats struct {
+		Count      int64 `json:"count"`
+		ErrorCount int64 `json:"error_count"`
+		LatencyMs  int64 `json:"latency_ms"`
 	}
 
 	ErrorDetails struct {

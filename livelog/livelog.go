@@ -51,6 +51,13 @@ type Writer struct {
 	trimNewLineSuffix bool
 	close             chan struct{}
 	ready             chan struct{}
+	// closeOnce makes upload()+client.Close run exactly once. stop() only
+	// gates the flusher, so a second Close() (timeout vs executeStep, or a
+	// retry) would otherwise tally close/upload twice in log_service_stats.
+	closeOnce sync.Once
+	closeErr  error
+
+	stats logstream.Stats
 }
 
 // New returns a new writer
@@ -158,7 +165,9 @@ func (b *Writer) Write(p []byte) (n int, err error) {
 }
 
 func (b *Writer) Open() error {
+	start := time.Now()
 	err := b.client.Open(context.Background(), b.key)
+	b.recordOp("open", err, time.Since(start))
 	if err != nil {
 		logrus.WithError(err).WithField("key", b.key).
 			Errorln("could not open the stream")
@@ -171,7 +180,19 @@ func (b *Writer) Open() error {
 
 // Close closes the writer and uploads the full contents to
 // the server.
+//
+// Close can be invoked more than once (a timed-out step's execute path, or a
+// later retry). Without the sync.Once below each call would re-run upload()
+// and client.Close (stop() only gates the flusher). Every caller gets the
+// first call's error, and log_service_stats counts each RPC once.
 func (b *Writer) Close() error {
+	b.closeOnce.Do(func() {
+		b.closeErr = b.closeStream()
+	})
+	return b.closeErr
+}
+
+func (b *Writer) closeStream() error {
 	if b.stop() {
 		// Flush anything waiting on a new line
 		if len(b.prev) > 0 {
@@ -183,9 +204,10 @@ func (b *Writer) Close() error {
 	b.checkErrInLogs()
 
 	err := b.upload()
-	// Close the log stream once upload has completed. Log in case of any error
-
-	if errc := b.client.Close(context.Background(), b.key); errc != nil {
+	start := time.Now()
+	errc := b.client.Close(context.Background(), b.key)
+	b.recordOp("close", errc, time.Since(start))
+	if errc != nil {
 		logrus.WithError(errc).WithField("key", b.key).
 			Errorln("failed to close log stream")
 	}
@@ -194,7 +216,10 @@ func (b *Writer) Close() error {
 
 // upload uploads the full log history to the server.
 func (b *Writer) upload() error {
-	return b.client.Upload(context.Background(), b.key, b.history)
+	start := time.Now()
+	err := b.client.Upload(context.Background(), b.key, b.history)
+	b.recordOp("upload", err, time.Since(start))
+	return err
 }
 
 // flush batch uploads all buffered logs to the server.
@@ -206,7 +231,9 @@ func (b *Writer) flush() error {
 	if len(lines) == 0 {
 		return nil
 	}
+	start := time.Now()
 	err := b.client.Write(context.Background(), b.key, lines)
+	b.recordOp("write", err, time.Since(start))
 	if err != nil {
 		logrus.WithError(err).WithField("key", b.key).WithField("num_lines", len(lines)).
 			Errorln("failed to flush lines")
@@ -328,6 +355,44 @@ func split(p []byte) []string {
 func formatNudge(line *logstream.Line, nudge logstream.Nudge) error {
 	return fmt.Errorf("found possible error on line %d.\n Log: %s.\n Possible error: %s.\n Possible resolution: %s",
 		line.Number+1, line.Message, nudge.GetError(), nudge.GetResolution())
+}
+
+func (b *Writer) LogServiceStats() logstream.Stats {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.stats
+}
+
+func (b *Writer) recordOp(op string, rpcErr error, latency time.Duration) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	s := b.opStatsLocked(op)
+	if s == nil {
+		return
+	}
+	s.Count++
+	if rpcErr != nil {
+		s.ErrorCount++
+		return
+	}
+	if latency > 0 {
+		s.LatencyMs += latency.Milliseconds()
+	}
+}
+
+func (b *Writer) opStatsLocked(op string) *logstream.OpStats {
+	switch op {
+	case "open":
+		return &b.stats.Open
+	case "write":
+		return &b.stats.Write
+	case "close":
+		return &b.stats.Close
+	case "upload":
+		return &b.stats.Upload
+	default:
+		return nil
+	}
 }
 
 func max(a, b int) int {
