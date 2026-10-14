@@ -15,7 +15,6 @@ import (
 	"github.com/harness/harness-docker-runner/engine"
 	"github.com/harness/harness-docker-runner/engine/spec"
 	"github.com/harness/harness-docker-runner/pipeline"
-	"github.com/harness/lite-engine/ti/callgraph"
 	tiCfg "github.com/harness/lite-engine/ti/config"
 	"github.com/harness/lite-engine/ti/instrumentation"
 	"github.com/harness/lite-engine/ti/report"
@@ -80,15 +79,7 @@ func executeRunTestStep(ctx context.Context, engine *engine.Engine, r *api.Start
 
 	exited, err := engine.Run(ctx, step, out, capture)
 	timeTakenMs := time.Since(start).Milliseconds()
-	if _, rerr := report.ParseAndUploadTests(ctx, r.TestReport, r.WorkingDir, step.Name, log, time.Now(), tiConfig, &telemetry.TestIntelligenceMetaData, r.Envs); rerr != nil {
-		log.WithError(rerr).Errorln("failed to upload report")
-	}
-
-	//Passing default false for failed test for now.
-	leStepRequest := toLiteEngineStartStepRequest(r)
-	if _, uerr := callgraph.Upload(ctx, step.Name, time.Since(start).Milliseconds(), log, time.Now(), tiConfig, cgDir, r.ID, nil, false, leStepRequest); uerr != nil {
-		log.WithError(uerr).Errorln("unable to collect callgraph")
-	}
+	collectTestReportsAndCallgraph(ctx, log, r, step.Name, start, tiConfig, telemetry, cgDir)
 
 	// Parse and upload savings to TI
 	optimizationState = savings.ParseAndUploadSavings(ctx, r.WorkingDir, log, step.Name, checkStepSuccess(exited, err), timeTakenMs, tiConfig, r.Envs, telemetry, r.Kind.String())

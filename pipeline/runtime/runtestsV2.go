@@ -19,7 +19,6 @@ import (
 	"github.com/harness/harness-docker-runner/engine/spec"
 	"github.com/harness/harness-docker-runner/pipeline"
 	leRuntime "github.com/harness/lite-engine/pipeline/runtime"
-	"github.com/harness/lite-engine/ti/callgraph"
 	tiCfg "github.com/harness/lite-engine/ti/config"
 	"github.com/harness/lite-engine/ti/report"
 	"github.com/harness/lite-engine/ti/savings"
@@ -104,15 +103,7 @@ func executeRunTestsV2Step(ctx context.Context, engine *engine.Engine, r *api.St
 		// If there are no paths specified, set Paths[0] to include all XML files and all TRX files
 		r.TestReport.Junit.Paths = []string{"**/*.xml", "**/*.trx"}
 	}
-	if _, rerr := report.ParseAndUploadTests(ctx, r.TestReport, r.WorkingDir, step.Name, log, time.Now(), tiConfig, &telemetry.TestIntelligenceMetaData, r.Envs); rerr != nil {
-		log.WithError(rerr).Errorln("failed to upload report")
-	}
-
-	//Passing default false for failed test for now
-	leStepRequest := toLiteEngineStartStepRequest(r)
-	if _, uerr := callgraph.Upload(ctx, step.Name, time.Since(start).Milliseconds(), log, time.Now(), tiConfig, outDir, r.ID, nil, false, leStepRequest); uerr != nil {
-		log.WithError(uerr).Errorln("unable to collect callgraph")
-	}
+	collectTestReportsAndCallgraph(ctx, log, r, step.Name, start, tiConfig, telemetry, outDir)
 
 	// Parse and upload savings to TI
 	optimizationState = savings.ParseAndUploadSavings(ctx, r.WorkingDir, log, step.Name, checkStepSuccess(exited, err), timeTakenMs, tiConfig, r.Envs, telemetry, r.Kind.String())
