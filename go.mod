@@ -27,8 +27,8 @@ require (
 
 require (
 	github.com/dchest/uniuri v0.0.0-20200228104902-7aecb25e1fe5
-	github.com/harness/lite-engine v0.5.200
-	github.com/harness/ti-client v0.0.0-20260820120339-a359c038ed72
+	github.com/harness/lite-engine v0.5.205
+	github.com/harness/ti-client v0.0.0-20261006201020-dfac3dc8c35b
 	github.com/wings-software/dlite v1.0.0-rc.15
 )
 

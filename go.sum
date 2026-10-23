@@ -154,10 +154,10 @@ github.com/harness/godotenv/v3 v3.0.1 h1:7QPEOkpx6SLLrYRRzPBp50d6c0XIxq721iqoFxb
 github.com/harness/godotenv/v3 v3.0.1/go.mod h1:UIXXJtTM7NkSYMYknHYOO2d8BfDlAWMYZRuRsXcDDR0=
 github.com/harness/godotenv/v4 v4.0.2 h1:w1ejcvR28wP67gKoMQ2aKRf+kI0Xorg/BetCwoG9KFs=
 github.com/harness/godotenv/v4 v4.0.2/go.mod h1:qpW/aRsktzrskWfKSHclHlvIp6+DJlmlYZXHQT+HBlE=
-github.com/harness/lite-engine v0.5.200 h1:V9gkSyzaMw9WlfjUSUkoX6asJg03+MZ0DFGPhUqqkI8=
-github.com/harness/lite-engine v0.5.200/go.mod h1:rb3t1f0FKDr22oia4iBnWBCE5+IKl0EjSygVcatqE+g=
-github.com/harness/ti-client v0.0.0-20260820120339-a359c038ed72 h1:CpKux7FHyL93FU97Jx/tFS8coNB9IbAA+GfZN8YeC5M=
-github.com/harness/ti-client v0.0.0-20260820120339-a359c038ed72/go.mod h1:DLVgJTI0Jo5rQPl2cUIEzLl5ltVTXmzTk0aRh0ZIH8s=
+github.com/harness/lite-engine v0.5.205 h1:Q4GUZrPeLnxxLv0tNb8Qeiqg0WLEv9wYag59YcIOcjE=
+github.com/harness/lite-engine v0.5.205/go.mod h1:B9pw7Jk5wTb9bJdFkkrZXndS/TSDW5I8vBIY4/4aYww=
+github.com/harness/ti-client v0.0.0-20261006201020-dfac3dc8c35b h1:VIFu7A8jqzQxrju77tV/AC3gr1et4qusLL/6OKWRp+g=
+github.com/harness/ti-client v0.0.0-20261006201020-dfac3dc8c35b/go.mod h1:DLVgJTI0Jo5rQPl2cUIEzLl5ltVTXmzTk0aRh0ZIH8s=
 github.com/hashicorp/errwrap v1.0.0/go.mod h1:YH+1FKiLXxHSkmPseP+kNlulaMuP3n2brvKWEqk/Jc4=
 github.com/hashicorp/errwrap v1.1.0 h1:OxrOeh75EUXMY8TBjag2fzXGZ40LB6IKw45YeGUDY2I=
 github.com/hashicorp/errwrap v1.1.0/go.mod h1:YH+1FKiLXxHSkmPseP+kNlulaMuP3n2brvKWEqk/Jc4=
