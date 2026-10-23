@@ -1,8 +1,8 @@
 module github.com/harness/harness-docker-runner
 
-go 1.24.0
+go 1.26.10
 
-toolchain go1.24.4
+toolchain go1.26.10
 
 require (
 	github.com/cenkalti/backoff/v4 v4.3.0
