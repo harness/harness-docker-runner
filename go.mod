@@ -1,6 +1,6 @@
 module github.com/harness/harness-docker-runner
 
-go 1.26.10
+go 1.24.0
 
 toolchain go1.26.10
 
