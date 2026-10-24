@@ -2,6 +2,8 @@ module github.com/harness/harness-docker-runner
 
 go 1.24.0
 
+toolchain go1.26.10
+
 require (
 	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/docker/distribution v2.8.2+incompatible
