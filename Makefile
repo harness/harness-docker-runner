@@ -1,4 +1,4 @@
 .PHONY: test
 
 test:
-	go test ./... -covermode=atomic -coverprofile=coverage.out
+	go test -mod=readonly -coverprofile=coverage.out -covermode=atomic ./...
