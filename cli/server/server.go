@@ -40,6 +40,8 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 		}
 	}
 
+	engine.SetHostProxyEnvs(os.Environ())
+
 	// load the system configuration from the environment.
 	loadedConfig, err := config.Load()
 	if err != nil {
