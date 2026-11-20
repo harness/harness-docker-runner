@@ -86,6 +86,14 @@ func executeRunStep(ctx context.Context, engine *engine.Engine, r *api.StartStep
 	artifactFile := fmt.Sprintf("%s/%s-artifact", pipeline.GetSharedVolPath(), step.ID)
 	step.Envs["PLUGIN_ARTIFACT_FILE"] = stepPath(step, artifactFile)
 
+	// The executor owns the explicit git clone metadata file contract: drone-git
+	// writes {"repoUrl","commitSha"} here and the executor reads it after the step
+	// exits. Not registered for temp-file cleanup — it is read post-run.
+	if _, found := step.Envs["HARNESS_EXPLICIT_GIT_CLONE_METADATA_FILE"]; !found {
+		explicitGitCloneMetadataFile := fmt.Sprintf("%s/%s-explicit-git-clone-metadata.json", pipeline.GetSharedVolPath(), step.ID)
+		step.Envs["HARNESS_EXPLICIT_GIT_CLONE_METADATA_FILE"] = stepPath(step, explicitGitCloneMetadataFile)
+	}
+
 	exited, err := engine.Run(ctx, step, out, capture)
 	timeTakenMs := time.Since(start).Milliseconds()
 	logrus.WithField("step_id", r.ID).WithField("stage_id", r.StageRuntimeID).Traceln("completed step run")

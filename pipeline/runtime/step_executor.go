@@ -19,6 +19,7 @@ import (
 	"github.com/harness/harness-docker-runner/errors"
 	"github.com/harness/harness-docker-runner/livelog"
 	"github.com/harness/harness-docker-runner/logstream"
+	"github.com/harness/harness-docker-runner/pipeline"
 	tiCfg "github.com/harness/lite-engine/ti/config"
 	"github.com/harness/ti-client/types"
 
@@ -39,6 +40,8 @@ type StepStatus struct {
 	Telemetry         *types.TelemetryData
 	ErrorDetails      *api.ErrorDetails
 	LogServiceStats   *api.LogServiceStats
+
+	ExplicitGitCloneMetadata string
 }
 
 const (
@@ -86,6 +89,7 @@ func (e *StepExecutor) StartStep(ctx context.Context, r *api.StartStepRequest, s
 		defer cleanupLogFiles(stdoutLogPath, stderrLogPath)
 
 		state, outputs, artifact, outputV2, optimizationState, telemetry, logStats, stepErr := e.executeStep(r, secrets, client, tiConfig, logConfig)
+		explicitGitCloneMetadata := readExplicitGitCloneMetadata(r.ID)
 
 		// Post annotations to Pipeline Service if step succeeded and feature is enabled
 		ffEnabled := isAnnotationsEnabled(r.StartStepRequestConfig.Envs)
@@ -109,7 +113,7 @@ func (e *StepExecutor) StartStep(ctx context.Context, r *api.StartStepRequest, s
 			)
 		}
 
-		status := StepStatus{Status: Complete, State: state, StepErr: stepErr, Outputs: outputs, Artifact: artifact, OutputV2: outputV2, OptimizationState: optimizationState, Telemetry: telemetry, ErrorDetails: errorDetails, LogServiceStats: logStats}
+		status := StepStatus{Status: Complete, State: state, StepErr: stepErr, Outputs: outputs, Artifact: artifact, OutputV2: outputV2, OptimizationState: optimizationState, Telemetry: telemetry, ErrorDetails: errorDetails, LogServiceStats: logStats, ExplicitGitCloneMetadata: explicitGitCloneMetadata}
 		e.mu.Lock()
 		e.stepStatus[r.ID] = status
 		channels := e.stepWaitCh[r.ID]
@@ -396,6 +400,8 @@ func convertStatus(status StepStatus) *api.PollStepResponse {
 		Telemetry:         status.Telemetry,
 		ErrorDetails:      status.ErrorDetails,
 		LogServiceStats:   status.LogServiceStats,
+
+		ExplicitGitCloneMetadata: status.ExplicitGitCloneMetadata,
 	}
 
 	stepErr := status.StepErr
@@ -419,6 +425,18 @@ func convertStatus(status StepStatus) *api.PollStepResponse {
 		r.Error = stepErr.Error()
 	}
 	return r
+}
+
+// readExplicitGitCloneMetadata reads the raw JSON the drone-git image wrote to
+// HARNESS_EXPLICIT_GIT_CLONE_METADATA_FILE (repo URL + commit SHA) and returns it
+// unparsed - parsing happens on the manager. Returns "" when the step did not write
+// clone metadata (non-clone image, or marker env absent) or the file is unreadable.
+func readExplicitGitCloneMetadata(stepID string) string {
+	data, err := os.ReadFile(fmt.Sprintf("%s/%s-explicit-git-clone-metadata.json", pipeline.GetSharedVolPath(), stepID))
+	if err != nil {
+		return ""
+	}
+	return string(data)
 }
 
 func logServiceStatsFrom(w logstream.Writer) *api.LogServiceStats {
