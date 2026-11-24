@@ -41,7 +41,7 @@ type StepStatus struct {
 	ErrorDetails      *api.ErrorDetails
 	LogServiceStats   *api.LogServiceStats
 
-	ExplicitGitCloneMetadata string
+	GitCloneMetadata string
 }
 
 const (
@@ -89,7 +89,7 @@ func (e *StepExecutor) StartStep(ctx context.Context, r *api.StartStepRequest, s
 		defer cleanupLogFiles(stdoutLogPath, stderrLogPath)
 
 		state, outputs, artifact, outputV2, optimizationState, telemetry, logStats, stepErr := e.executeStep(r, secrets, client, tiConfig, logConfig)
-		explicitGitCloneMetadata := readExplicitGitCloneMetadata(r.ID)
+		gitCloneMetadata := readGitCloneMetadata(r.ID)
 
 		// Post annotations to Pipeline Service if step succeeded and feature is enabled
 		ffEnabled := isAnnotationsEnabled(r.StartStepRequestConfig.Envs)
@@ -113,7 +113,7 @@ func (e *StepExecutor) StartStep(ctx context.Context, r *api.StartStepRequest, s
 			)
 		}
 
-		status := StepStatus{Status: Complete, State: state, StepErr: stepErr, Outputs: outputs, Artifact: artifact, OutputV2: outputV2, OptimizationState: optimizationState, Telemetry: telemetry, ErrorDetails: errorDetails, LogServiceStats: logStats, ExplicitGitCloneMetadata: explicitGitCloneMetadata}
+		status := StepStatus{Status: Complete, State: state, StepErr: stepErr, Outputs: outputs, Artifact: artifact, OutputV2: outputV2, OptimizationState: optimizationState, Telemetry: telemetry, ErrorDetails: errorDetails, LogServiceStats: logStats, GitCloneMetadata: gitCloneMetadata}
 		e.mu.Lock()
 		e.stepStatus[r.ID] = status
 		channels := e.stepWaitCh[r.ID]
@@ -401,7 +401,7 @@ func convertStatus(status StepStatus) *api.PollStepResponse {
 		ErrorDetails:      status.ErrorDetails,
 		LogServiceStats:   status.LogServiceStats,
 
-		ExplicitGitCloneMetadata: status.ExplicitGitCloneMetadata,
+		GitCloneMetadata: status.GitCloneMetadata,
 	}
 
 	stepErr := status.StepErr
@@ -427,12 +427,12 @@ func convertStatus(status StepStatus) *api.PollStepResponse {
 	return r
 }
 
-// readExplicitGitCloneMetadata reads the raw JSON the drone-git image wrote to
-// HARNESS_EXPLICIT_GIT_CLONE_METADATA_FILE (repo URL + commit SHA) and returns it
+// readGitCloneMetadata reads the raw JSON the drone-git image wrote to
+// HARNESS_GIT_CLONE_METADATA_FILE (repo URL + commit SHA) and returns it
 // unparsed - parsing happens on the manager. Returns "" when the step did not write
 // clone metadata (non-clone image, or marker env absent) or the file is unreadable.
-func readExplicitGitCloneMetadata(stepID string) string {
-	data, err := os.ReadFile(fmt.Sprintf("%s/%s-explicit-git-clone-metadata.json", pipeline.GetSharedVolPath(), stepID))
+func readGitCloneMetadata(stepID string) string {
+	data, err := os.ReadFile(fmt.Sprintf("%s/%s-git-clone-metadata.json", pipeline.GetSharedVolPath(), stepID))
 	if err != nil {
 		return ""
 	}

@@ -179,7 +179,7 @@ type (
 		ErrorDetails      *ErrorDetails        `json:"error_details,omitempty"`
 		LogServiceStats   *LogServiceStats     `json:"log_service_stats,omitempty"`
 
-		ExplicitGitCloneMetadata string `json:"explicit_git_clone_metadata,omitempty"`
+		GitCloneMetadata string `json:"git_clone_metadata,omitempty"`
 	}
 
 	LogServiceStats struct {
