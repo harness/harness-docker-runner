@@ -7,43 +7,6 @@
 * Start the server: `go run main.go server`
 * Check the health status of the server: `go run main.go client`
 
-## Host proxy propagation
-
-When the runner host itself sits behind a corporate proxy, the proxy variables in the
-runner's environment are propagated to every step, so containerised steps can reach
-the network the same way the host can.
-
-**What is propagated.** At startup the runner snapshots `HTTP_PROXY`, `HTTPS_PROXY`
-and `NO_PROXY` from its own environment (for example from the `--env-file`). Only
-these three variables are propagated; other host variables are never sent to
-container steps. The snapshot is taken once at startup, so changing the variables
-requires a runner restart.
-
-**Both spellings are set.** Each variable is written in uppercase and lowercase
-(`HTTP_PROXY` and `http_proxy`, etc.), because different tools read different
-spellings (curl reads lowercase, wget reads uppercase). On Windows the names are
-case-insensitive, so the pair collapses into one entry. Host steps already inherit
-the host environment; the fix additionally adds the lowercase spellings to them.
-
-**Precedence.** Values are resolved per variable, most specific first:
-
-1. Step-level `environment` (the step's own value wins)
-2. Stage-level envs (from the `/setup` request)
-3. Host fill (the startup snapshot)
-
-An empty pipeline value counts as set: a step or stage that sets `HTTPS_PROXY: ""`
-turns the host proxy **off** for that variable (both spellings), while the other
-variables are still filled from the host.
-
-**NO_PROXY.** Make sure `NO_PROXY` covers anything steps must reach directly,
-without the proxy: `localhost`/`127.0.0.1`, the metadata server
-(`169.254.169.254`, `metadata.google.internal` on GCP), and any background
-service containers that steps talk to over the stage network.
-
-**Not covered.** Pulling images is done by the Docker daemon, which has its own
-proxy configuration (`systemd` drop-in or `~/.docker/config.json`); the runner does
-not manage it.
-
 ## Building binaries
 
 Cross-compiling needs no extra setup — the binaries land in the `release` directory.

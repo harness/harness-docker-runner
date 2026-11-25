@@ -11,12 +11,6 @@ import (
 
 // Converts api params to engine.Step
 func toStep(r *api.StartStepRequest) *spec.Step {
-	// The step runners write into Envs, and a request without an environment
-	// field decodes to a nil map.
-	envs := r.Envs
-	if envs == nil {
-		envs = map[string]string{}
-	}
 	return &spec.Step{
 		ID:             r.ID,
 		Auth:           r.Auth,
@@ -28,7 +22,7 @@ func toStep(r *api.StartStepRequest) *spec.Step {
 		Devices:        r.Devices,
 		DNS:            r.DNS,
 		DNSSearch:      r.DNSSearch,
-		Envs:           envs,
+		Envs:           r.Envs,
 		ExtraHosts:     r.ExtraHosts,
 		IgnoreStdout:   r.IgnoreStdout,
 		IgnoreStderr:   r.IgnoreStderr,
