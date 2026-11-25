@@ -95,23 +95,7 @@ func (e *Engine) Run(ctx context.Context, step *spec.Step, output io.Writer, cap
 	cfg := e.pipelineConfig
 	e.mu.Unlock()
 
-	envs := make(map[string]string)
-	if step.Image == "" {
-		// Set parent process envs in case step is executed directly on the VM.
-		// This sets the PATH environment variable (in case it is set on parent process) on sub-process executing the step.
-		for _, e := range os.Environ() {
-			if i := strings.Index(e, "="); i >= 0 {
-				envs[e[:i]] = e[i+1:]
-			}
-		}
-	}
-	for k, v := range cfg.Envs {
-		envs[k] = v
-	}
-	for k, v := range step.Envs {
-		envs[k] = v
-	}
-	step.Envs = envs
+	step.Envs = stepEnvs(step.Image == "", os.Environ(), cfg.Envs, step.Envs, hostProxyEnvs)
 
 	// A step with an image runs inside a container, which on windows only ever
 	// exposes a C drive, so it needs the container's view of the paths it is
@@ -137,6 +121,33 @@ func (e *Engine) Run(ctx context.Context, step *spec.Step, output io.Writer, cap
 	}
 
 	return exec.Run(ctx, step, output, capture)
+}
+
+// stepEnvs builds the environment of a step from the stage envs and the step
+// envs, which win. A step that runs on the host also starts from environ, the
+// runner process environment. Every step then gets the proxy variables of
+// proxyEnvs that the stage and the step leave unset.
+func stepEnvs(isHostStep bool, environ []string, stageEnvs, envs, proxyEnvs map[string]string) map[string]string {
+	merged := make(map[string]string)
+	if isHostStep {
+		// Set parent process envs in case step is executed directly on the VM.
+		// This sets the PATH environment variable (in case it is set on parent process) on sub-process executing the step.
+		// Proxy variables are skipped: stage setup writes pipeline proxy values into the
+		// process environment, so they come from proxyEnvs, captured at startup.
+		for _, e := range environ {
+			if i := strings.Index(e, "="); i >= 0 && !isProxyEnv(e[:i]) {
+				merged[e[:i]] = e[i+1:]
+			}
+		}
+	}
+	for k, v := range stageEnvs {
+		merged[k] = v
+	}
+	for k, v := range envs {
+		merged[k] = v
+	}
+	fillProxyEnvs(merged, proxyEnvs)
+	return merged
 }
 
 func createFiles(paths []*spec.File) error {
