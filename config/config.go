@@ -20,15 +20,16 @@ type Config struct {
 	}
 
 	Server struct {
-		Bind              string `envconfig:"HTTPS_BIND" default:":3000"`
-		CertFile          string `envconfig:"SERVER_CERT_FILE" default:"/tmp/certs/server-cert.pem"` // Server certificate PEM file
-		KeyFile           string `envconfig:"SERVER_KEY_FILE" default:"/tmp/certs/server-key.pem"`   // Server key PEM file
-		CACertFile        string `envconfig:"CLIENT_CERT_FILE" default:"/tmp/certs/ca-cert.pem"`     // CA certificate file
-		SkipPrepareServer bool   `envconfig:"SKIP_PREPARE_SERVER" default:"false"`                   // skip prepare server, install docker / git
-		Insecure          bool   `envconfig:"SERVER_INSECURE" default:"true"`                        // run in insecure mode
-		PluginBinaryURI   string `envconfig:"PLUGIN_BINARY_URI" default:"https://github.com/drone/plugin/releases/download/v3.9.4-beta"`
-		EnvmanBinaryURI   string `envconfig:"ENVMAN_BINARY_URI" default:"https://github.com/bitrise-io/envman/releases/download/2.4.2"`
-		HcliBinaryURI     string `envconfig:"HCLI_BINARY_URI" default:"https://storage.googleapis.com/harness-ti/hcli/v0.13"`
+		Bind                string `envconfig:"HTTPS_BIND" default:":3000"`
+		CertFile            string `envconfig:"SERVER_CERT_FILE" default:"/tmp/certs/server-cert.pem"` // Server certificate PEM file
+		KeyFile             string `envconfig:"SERVER_KEY_FILE" default:"/tmp/certs/server-key.pem"`   // Server key PEM file
+		CACertFile          string `envconfig:"CLIENT_CERT_FILE" default:"/tmp/certs/ca-cert.pem"`     // CA certificate file
+		SkipPrepareServer   bool   `envconfig:"SKIP_PREPARE_SERVER" default:"false"`                   // skip prepare server, install docker / git
+		Insecure            bool   `envconfig:"SERVER_INSECURE" default:"true"`                        // run in insecure mode
+		PluginBinaryURI     string `envconfig:"PLUGIN_BINARY_URI" default:"https://github.com/drone/plugin/releases/download/v3.9.4-beta"`
+		EnvmanBinaryURI     string `envconfig:"ENVMAN_BINARY_URI" default:"https://github.com/bitrise-io/envman/releases/download/2.4.2"`
+		HcliBinaryURI       string `envconfig:"HCLI_BINARY_URI" default:"https://storage.googleapis.com/harness-ti/hcli/v0.13"`
+		HarnessCLIBinaryURI string `envconfig:"HARNESS_CLI_BINARY_URI" default:"https://storage.googleapis.com/harness-ti/harness-cli-unified/v1.0.1"`
 	}
 
 	Client struct {
