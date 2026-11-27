@@ -29,7 +29,7 @@ type Config struct {
 		PluginBinaryURI     string `envconfig:"PLUGIN_BINARY_URI" default:"https://github.com/drone/plugin/releases/download/v3.9.4-beta"`
 		EnvmanBinaryURI     string `envconfig:"ENVMAN_BINARY_URI" default:"https://github.com/bitrise-io/envman/releases/download/2.4.2"`
 		HcliBinaryURI       string `envconfig:"HCLI_BINARY_URI" default:"https://storage.googleapis.com/harness-ti/hcli/v0.13"`
-		HarnessCLIBinaryURI string `envconfig:"HARNESS_CLI_BINARY_URI" default:"https://storage.googleapis.com/harness-ti/harness-cli-unified/v1.0.1"`
+		HarnessCLIBinaryURI string `envconfig:"HARNESS_CLI_BINARY_URI" default:"https://storage.googleapis.com/harness-ti/harness-cli-unified/v1.0.2"`
 	}
 
 	Client struct {

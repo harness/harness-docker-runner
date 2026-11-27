@@ -37,7 +37,7 @@ func TestInstallHarnessCLI(t *testing.T) {
 				return nil
 			}
 
-			const baseURI = "https://storage.googleapis.com/harness-ti/harness-cli-unified/v1.0.1"
+			const baseURI = "https://storage.googleapis.com/harness-ti/harness-cli-unified/v1.0.2"
 			installHarnessCLI(InstanceInfo{osType: osType, archType: "arm64"}, baseURI)
 
 			want := []downloadCall{
@@ -62,7 +62,7 @@ func TestInstallHarnessCLI(t *testing.T) {
 }
 
 func TestCLIDownloadURLWindows(t *testing.T) {
-	const baseURI = "https://storage.googleapis.com/harness-ti/harness-cli-unified/v1.0.1"
+	const baseURI = "https://storage.googleapis.com/harness-ti/harness-cli-unified/v1.0.2"
 	want := baseURI + "/harness-windows-amd64.exe"
 	if got := cliDownloadURL(baseURI, "harness", "windows", "amd64"); got != want {
 		t.Fatalf("cliDownloadURL() = %q, want %q", got, want)
@@ -136,7 +136,7 @@ func TestInstallHarnessCLIWindows(t *testing.T) {
 		return nil
 	}
 
-	const baseURI = "https://storage.googleapis.com/harness-ti/harness-cli-unified/v1.0.1"
+	const baseURI = "https://storage.googleapis.com/harness-ti/harness-cli-unified/v1.0.2"
 	installHarnessCLI(InstanceInfo{osType: "windows", archType: "amd64"}, baseURI)
 
 	want := []downloadCall{{
@@ -221,7 +221,7 @@ func TestPrepareSystemInstallsHarnessCLI(t *testing.T) {
 		return nil
 	}
 
-	const baseURI = "https://storage.googleapis.com/harness-ti/harness-cli-unified/v1.0.1"
+	const baseURI = "https://storage.googleapis.com/harness-ti/harness-cli-unified/v1.0.2"
 	cfg := &config.Config{}
 	cfg.Server.HarnessCLIBinaryURI = baseURI
 	PrepareSystem(cfg)
