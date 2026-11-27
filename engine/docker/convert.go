@@ -24,9 +24,26 @@ import (
 )
 
 const (
-	windowsOS = "windows"
-	hcliPath  = "/usr/local/bin/hcli" // Linux/macOS host binary path
+	windowsOS   = "windows"
+	darwinOS    = "darwin"
+	hcliPath    = "/usr/local/bin/hcli"    // Linux/macOS host binary path
+	harnessPath = "/usr/local/bin/harness" // Linux host and container binary path
 )
+
+var getHarnessSourcePath = func() string {
+	return getHarnessSourcePathForOS(runtime.GOOS)
+}
+
+func getHarnessSourcePathForOS(goos string) string {
+	if goos == darwinOS {
+		homeDir := os.Getenv("HOME")
+		if homeDir == "" {
+			homeDir = "/tmp"
+		}
+		return filepath.Join(homeDir, "harness", "bin", "harness-linux")
+	}
+	return harnessPath
+}
 
 // returns a container configuration.
 func toConfig(pipelineConfig *spec.PipelineConfig, step *spec.Step) *container.Config {
@@ -113,9 +130,9 @@ func toHostConfig(pipelineConfig *spec.PipelineConfig, step *spec.Step) *contain
 		config.Mounts = toVolumeMounts(pipelineConfig, step)
 	}
 
-	// Mount hcli binary for containers (following lite-engine approach)
+	// Mount CLI binaries for containers (following lite-engine approach)
 	if runtime.GOOS == windowsOS {
-		// Windows: Mount directory containing hcli.exe
+		// Windows: Mount directory containing hcli.exe and harness.exe
 		// C:\Program Files\harness-hcli -> C:\harness-hcli (in container)
 		config.Mounts = append(config.Mounts, mount.Mount{
 			Type:     mount.TypeBind,
@@ -145,7 +162,7 @@ func toHostConfig(pipelineConfig *spec.PipelineConfig, step *spec.Step) *contain
 			if err != nil {
 				resolvedPath = macHcliPath
 			}
-			
+
 			config.Mounts = append(config.Mounts, mount.Mount{
 				Type:   mount.TypeBind,
 				Source: resolvedPath,
@@ -156,6 +173,27 @@ func toHostConfig(pipelineConfig *spec.PipelineConfig, step *spec.Step) *contain
 				"path":  macHcliPath,
 				"error": err,
 			}).Warnln("Linux hcli not found for macOS containers - annotations may not work")
+		}
+	}
+
+	if runtime.GOOS != windowsOS {
+		sourcePath := getHarnessSourcePath()
+		if _, err := os.Stat(sourcePath); err == nil {
+			if runtime.GOOS == darwinOS {
+				if resolvedPath, resolveErr := filepath.EvalSymlinks(sourcePath); resolveErr == nil {
+					sourcePath = resolvedPath
+				}
+			}
+			config.Mounts = append(config.Mounts, mount.Mount{
+				Type:   mount.TypeBind,
+				Source: sourcePath,
+				Target: harnessPath,
+			})
+		} else {
+			logrus.WithFields(logrus.Fields{
+				"path":  sourcePath,
+				"error": err,
+			}).Warnln("Harness CLI not found for containers - CLI commands may not work")
 		}
 	}
 

@@ -5,7 +5,10 @@
 package docker
 
 import (
+	"os"
+	"path/filepath"
 	"reflect"
+	"runtime"
 	"testing"
 
 	"github.com/harness/harness-docker-runner/engine/spec"
@@ -72,5 +75,80 @@ func TestToNetConfig_StepOffStageNetwork(t *testing.T) {
 	cfg := toNetConfig(pcfg, proc)
 	if len(cfg.EndpointsConfig) != 0 {
 		t.Fatalf("expected no endpoints for off-network step, got %+v", cfg.EndpointsConfig)
+	}
+}
+
+func TestToHostConfigHarnessCLIMount(t *testing.T) {
+	if runtime.GOOS == windowsOS {
+		config := toHostConfig(&spec.PipelineConfig{}, &spec.Step{})
+		for _, m := range config.Mounts {
+			if m.Target == `C:\harness-hcli` {
+				if m.Source != `C:\Program Files\harness-hcli` || !m.ReadOnly {
+					t.Fatalf("unexpected Windows CLI mount: %#v", m)
+				}
+				return
+			}
+		}
+		t.Fatal("Windows CLI directory mount not found")
+	}
+
+	sourcePath := filepath.Join(t.TempDir(), "harness")
+	if err := os.WriteFile(sourcePath, []byte("binary"), 0600); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+	originalGetHarnessSourcePath := getHarnessSourcePath
+	t.Cleanup(func() { getHarnessSourcePath = originalGetHarnessSourcePath })
+	getHarnessSourcePath = func() string { return sourcePath }
+
+	wantSourcePath, err := filepath.EvalSymlinks(sourcePath)
+	if err != nil {
+		t.Fatalf("EvalSymlinks() error = %v", err)
+	}
+	config := toHostConfig(&spec.PipelineConfig{}, &spec.Step{})
+	mounted := false
+	for _, m := range config.Mounts {
+		if m.Target == harnessPath {
+			if m.Source != wantSourcePath {
+				t.Fatalf("harness mount source = %q, want %q", m.Source, wantSourcePath)
+			}
+			mounted = true
+		}
+	}
+	if !mounted {
+		t.Fatalf("harness mount from %q to %q not found in %#v", sourcePath, harnessPath, config.Mounts)
+	}
+
+	getHarnessSourcePath = func() string { return filepath.Join(t.TempDir(), "missing-harness") }
+	config = toHostConfig(&spec.PipelineConfig{}, &spec.Step{})
+	for _, m := range config.Mounts {
+		if m.Target == harnessPath {
+			t.Fatalf("unexpected mount for missing harness binary: %#v", m)
+		}
+	}
+}
+
+func TestGetHarnessSourcePath(t *testing.T) {
+	homeDir := t.TempDir()
+	tests := []struct {
+		name string
+		goos string
+		home string
+		want string
+	}{
+		{name: "linux", goos: "linux", want: harnessPath},
+		{name: "darwin home", goos: darwinOS, home: homeDir, want: filepath.Join(homeDir, "harness", "bin", "harness-linux")},
+		{name: "darwin fallback", goos: darwinOS, want: "/tmp/harness/bin/harness-linux"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("HOME", tt.home)
+			if got := getHarnessSourcePathForOS(tt.goos); got != tt.want {
+				t.Fatalf("getHarnessSourcePathForOS() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+
+	if got, want := getHarnessSourcePath(), getHarnessSourcePathForOS(runtime.GOOS); got != want {
+		t.Fatalf("getHarnessSourcePath() = %q, want %q", got, want)
 	}
 }

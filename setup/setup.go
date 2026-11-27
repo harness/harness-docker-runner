@@ -46,6 +46,9 @@ func PrepareSystem(config *config.Config) {
 	if !(HcliInstalled(instanceInfo)) {
 		installHcli(instanceInfo, config.Server.HcliBinaryURI)
 	}
+	if !(HarnessCLIInstalled(instanceInfo)) {
+		installHarnessCLI(instanceInfo, config.Server.HarnessCLIBinaryURI)
+	}
 }
 
 const windowsString = "windows"
@@ -309,110 +312,118 @@ func installDocker(instanceInfo InstanceInfo) {
 }
 
 // HcliInstalled checks if hcli binary is installed
-func HcliInstalled(instanceInfo InstanceInfo) (installed bool) {
-	logrus.Infoln("checking hcli is installed")
-	hcli := "hcli"
-	switch instanceInfo.osType {
-	case windowsString:
-		hcli = "hcli.exe"
+func HcliInstalled(instanceInfo InstanceInfo) bool {
+	return cliInstalled(instanceInfo, "hcli")
+}
+
+// HarnessCLIInstalled checks if the unified Harness CLI binary is installed.
+func HarnessCLIInstalled(instanceInfo InstanceInfo) bool {
+	return cliInstalled(instanceInfo, "harness")
+}
+
+func cliInstalled(instanceInfo InstanceInfo, name string) bool {
+	logrus.Infof("checking %s is installed", name)
+	binary := name
+	if instanceInfo.osType == windowsString {
+		binary += ".exe"
 	}
 
-	path, err := exec.LookPath(hcli)
+	path, err := exec.LookPath(binary)
 	if err != nil {
-		logrus.Infoln("hcli binary not found in PATH")
+		logrus.Infof("%s binary not found in PATH", name)
 		return false
 	}
 	cmd := exec.Command(path, "--version")
 	if err := cmd.Run(); err != nil {
-		logrus.Infof("Error running hcli --version: %v\n", err)
+		logrus.Infof("Error running %s --version: %v\n", name, err)
 		return false
 	}
-	logrus.Infoln("hcli is installed")
+	logrus.Infof("%s is installed", name)
 	return true
 }
 
+var downloadCLI = downloadFile
+
 func installHcli(instanceInfo InstanceInfo, hcliBinaryURI string) {
-	// Strategy:
-	// 1. Download host OS binary first (for non-containerized steps)
-	//    - Linux: hcli -> /usr/local/bin/hcli
-	//    - Windows: hcli.exe -> C:\Program Files\lite-engine\hcli.exe
-	//    - macOS: hcli -> /usr/local/bin/hcli
-	// 2. For containers:
-	//    - Linux/Windows: Mount the same host binary (works natively)
-	//    - macOS: Download Linux binary separately (Mac containers are Linux-based)
-	
-	hostBinary := "hcli"
+	installCLI(instanceInfo, "hcli", hcliBinaryURI)
+}
+
+func installHarnessCLI(instanceInfo InstanceInfo, harnessCLIBinaryURI string) {
+	installCLI(instanceInfo, "harness", harnessCLIBinaryURI)
+}
+
+func installCLI(instanceInfo InstanceInfo, name, binaryURI string) {
+	// Download the host binary for non-containerized steps. macOS also needs a
+	// Linux binary because its containers are Linux-based.
+	hostBinary := name
 	hostDir := "/usr/local/bin"
-	hostURL := fmt.Sprintf("%s/hcli-%s-%s", 
-		hcliBinaryURI, instanceInfo.osType, instanceInfo.archType)
-	
-	// Windows-specific paths and PATH setup
+	hostURL := cliDownloadURL(binaryURI, name, instanceInfo.osType, instanceInfo.archType)
+
 	if instanceInfo.osType == windowsString {
-		hostBinary = "hcli.exe"
+		hostBinary += ".exe"
 		hostDir = `C:\Program Files\harness-hcli`
-		hostURL += ".exe"
-		
-		// Create directory if it doesn't exist
+
 		if err := os.MkdirAll(hostDir, 0755); err != nil {
 			logrus.WithError(err).Errorf("Failed to create directory %s", hostDir)
 			return
 		}
-		
-		// Add to PATH for non-containerized steps
+
+		// Add to PATH for non-containerized steps.
 		currentPath := os.Getenv("PATH")
 		if !strings.Contains(currentPath, hostDir) {
 			newPath := fmt.Sprintf("%s;%s", hostDir, currentPath)
 			os.Setenv("PATH", newPath)
 		}
 	}
-	
-	// Download host OS hcli
+
 	logrus.WithFields(logrus.Fields{
 		"os":   instanceInfo.osType,
 		"arch": instanceInfo.archType,
 		"url":  hostURL,
 		"dest": filepath.Join(hostDir, hostBinary),
-	}).Infoln("Downloading hcli for host OS")
-	
-	err := downloadFile(hostURL, hostDir, hostBinary)
-	if err != nil {
-		logrus.WithError(err).Error("Host hcli download failed")
+	}).Infof("Downloading %s for host OS", name)
+
+	if err := downloadCLI(hostURL, hostDir, hostBinary); err != nil {
+		logrus.WithError(err).Errorf("Host %s download failed", name)
 		return
 	}
-	logrus.WithField("path", filepath.Join(hostDir, hostBinary)).Infoln("Host hcli installed")
-	
-	// macOS special case: Download Linux hcli for containers
-	// (Mac containers are Linux-based, unlike Windows which can run Windows containers)
+	logrus.WithField("path", filepath.Join(hostDir, hostBinary)).Infof("Host %s installed", name)
+
 	if instanceInfo.osType == osxString {
 		homeDir := os.Getenv("HOME")
 		if homeDir == "" {
-			// Fallback to /tmp if HOME is not set (extremely rare on macOS)
 			homeDir = "/tmp"
-			logrus.Warnln("HOME environment variable not set, using /tmp as fallback for Linux hcli download")
+			logrus.Warnln("HOME environment variable not set, using /tmp as fallback for Linux CLI download")
 		}
-		
+
 		containerDir := filepath.Join(homeDir, "harness", "bin")
 		if err := os.MkdirAll(containerDir, 0755); err != nil {
 			logrus.WithError(err).Warnf("Failed to create directory %s", containerDir)
 			return
 		}
-		
-		containerBinary := "hcli-linux"
-		containerURL := fmt.Sprintf("%s/hcli-linux-%s", 
-			hcliBinaryURI, instanceInfo.archType)
-		
+
+		containerBinary := name + "-linux"
+		containerURL := cliDownloadURL(binaryURI, name, "linux", instanceInfo.archType)
+
 		logrus.WithFields(logrus.Fields{
 			"arch": instanceInfo.archType,
 			"url":  containerURL,
 			"dest": filepath.Join(containerDir, containerBinary),
-		}).Infoln("Downloading Linux hcli for macOS containers")
-		
-		err := downloadFile(containerURL, containerDir, containerBinary)
-		if err != nil {
-			logrus.WithError(err).Warnln("Failed to download Linux hcli for containers")
+		}).Infof("Downloading Linux %s for macOS containers", name)
+
+		if err := downloadCLI(containerURL, containerDir, containerBinary); err != nil {
+			logrus.WithError(err).Warnf("Failed to download Linux %s for containers", name)
 			return
 		}
-		
-		logrus.WithField("path", filepath.Join(containerDir, containerBinary)).Infoln("Linux hcli installed for macOS containers")
+
+		logrus.WithField("path", filepath.Join(containerDir, containerBinary)).Infof("Linux %s installed for macOS containers", name)
 	}
+}
+
+func cliDownloadURL(binaryURI, name, osType, archType string) string {
+	url := fmt.Sprintf("%s/%s-%s-%s", binaryURI, name, osType, archType)
+	if osType == windowsString {
+		url += ".exe"
+	}
+	return url
 }
